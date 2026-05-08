@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Book, BookMode, ProcessingState } from '../types';
-import { extractTextFromPdf } from '../services/geminiService';
+import { extractTextFromPdf } from '../services/pdfService';
 import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconBrain } from './Icons';
 
 interface LibraryProps {
@@ -31,28 +31,26 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
       return;
     }
 
-    setProcessing({ isProcessing: true, message: 'Yapay zeka PDF içeriğini okuyor...' });
+    if (file.size > 30 * 1024 * 1024) {
+      alert('Dosya boyutu 30MB\'dan büyük olamaz.');
+      return;
+    }
+
+    setProcessing({ isProcessing: true, message: 'PDF analiz ediliyor, lütfen bekleyin...' });
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Data = (reader.result as string).split(',')[1];
-        try {
-          const extractedText = await extractTextFromPdf(base64Data);
-          setNewBookContent(extractedText);
-          if (!newBookTitle) {
-            setNewBookTitle(file.name.replace('.pdf', ''));
-          }
-          setProcessing({ isProcessing: false, message: '' });
-        } catch (error) {
-          setProcessing({ isProcessing: false, message: '' });
-          alert('PDF okunamadı. Lütfen tekrar deneyin.');
-        }
-      };
-    } catch (err) {
+      const arrayBuffer = await file.arrayBuffer();
+      const extractedText = await extractTextFromPdf(arrayBuffer);
+      setNewBookContent(extractedText);
+      if (!newBookTitle) {
+        setNewBookTitle(file.name.replace(/\.pdf$/i, ''));
+      }
       setProcessing({ isProcessing: false, message: '' });
-      console.error(err);
+    } catch (error: unknown) {
+      setProcessing({ isProcessing: false, message: '' });
+      const msg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+      alert(`PDF okunamadı: ${msg}`);
+      console.error(error);
     }
   };
 
@@ -320,7 +318,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                     <>
                       <IconUpload />
                       <p className="mt-3 text-stone-600 font-medium">PDF Seçmek için Tıklayın</p>
-                      <p className="mt-1 text-stone-400 text-xs">Maksimum 5MB.</p>
+                      <p className="mt-1 text-stone-400 text-xs">Maksimum 30MB · Yapay zeka kullanılmaz</p>
                     </>
                   )}
                   <input 
