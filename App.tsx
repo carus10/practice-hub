@@ -112,6 +112,13 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateBook = (updatedBook: Book) => {
+    setBooks(prev => prev.map(b => b.id === updatedBook.id ? updatedBook : b));
+    if (activeBook && activeBook.id === updatedBook.id) {
+      setActiveBook(updatedBook);
+    }
+  };
+
   const handleAddHighlight = (bookId: string, highlightInput: Omit<Highlight, 'color'> & { color: 'red' | 'blue' | 'green' | null }) => {
       setBooks(prev => prev.map(b => {
           if (b.id === bookId) {
@@ -237,6 +244,7 @@ const App: React.FC = () => {
           onAddBook={handleAddBook} 
           onSelectBook={handleSelectBook}
           onDeleteBook={handleDeleteBook}
+          onUpdateBook={handleUpdateBook}
           onOpenDictionary={() => setView(AppView.DICTIONARY)}
           onOpenStudyNotes={() => setView(AppView.STUDY_NOTES)}
         />

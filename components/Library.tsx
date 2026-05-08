@@ -8,11 +8,12 @@ interface LibraryProps {
   onSelectBook: (book: Book) => void;
   onAddBook: (book: Book) => void;
   onDeleteBook: (id: string) => void;
+  onUpdateBook: (book: Book) => void;
   onOpenDictionary: () => void;
   onOpenStudyNotes: () => void;
 }
 
-export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onOpenDictionary, onOpenStudyNotes }) => {
+export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onUpdateBook, onOpenDictionary, onOpenStudyNotes }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'paste' | 'pdf'>('paste');
   const [newBookTitle, setNewBookTitle] = useState('');
@@ -22,8 +23,63 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   const [processing, setProcessing] = useState<ProcessingState>({ isProcessing: false, message: '' });
   const [bookToDelete, setBookToDelete] = useState<string | null>(null);
   const [newBookCover, setNewBookCover] = useState<string | undefined>(undefined);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, bookId: string } | null>(null);
+  const [editingBookId, setEditingBookId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const editCoverInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handleContextMenu = (e: React.MouseEvent, bookId: string) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      bookId
+    });
+  };
+
+  const handleEditCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingBookId) return;
+    
+    if (!file.type.startsWith('image/')) {
+       alert('Lütfen geçerli bir resim dosyası seçin.');
+       return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            const scale = Math.min(1.0, 400 / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const coverData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            const book = books.find(b => b.id === editingBookId);
+            if (book) {
+                onUpdateBook({ ...book, coverImage: coverData });
+            }
+            setEditingBookId(null);
+        };
+        if (typeof event.target?.result === 'string') {
+            img.src = event.target.result;
+        }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const getMeshGradient = (id: string) => {
     const gradients = [
@@ -212,6 +268,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
               key={book.id}
               className="group relative bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-[22rem]"
               onClick={() => onSelectBook(book)}
+              onContextMenu={(e) => handleContextMenu(e, book.id)}
             >
                {/* Cover Area */}
                <div className="relative h-[65%] w-full bg-stone-100 overflow-hidden">
@@ -270,6 +327,43 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
           ))}
         </div>
       )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div 
+          className="fixed z-[1000] bg-white border border-stone-200 shadow-xl rounded-lg py-1 w-48 animate-in fade-in zoom-in duration-100"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button 
+            onClick={() => {
+              setEditingBookId(contextMenu.bookId);
+              editCoverInputRef.current?.click();
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+          >
+            <IconUpload /> Kapak Değiştir
+          </button>
+          <button 
+            onClick={() => {
+              setBookToDelete(contextMenu.bookId);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100"
+          >
+            <IconTrash /> Sil
+          </button>
+        </div>
+      )}
+
+      <input 
+        type="file" 
+        ref={editCoverInputRef} 
+        className="hidden" 
+        accept="image/*" 
+        onChange={handleEditCoverUpload} 
+      />
 
       {/* New Book Modal */}
       {isModalOpen && (
