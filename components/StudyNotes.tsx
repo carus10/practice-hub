@@ -147,15 +147,29 @@ export const StudyNotes: React.FC<StudyNotesProps> = ({
 
   const startPractice = (group: StudyGroup) => {
     setPracticeGroup(group);
-    setPracticeIndex(0);
-    setPracticePageStart(0);
+    setPracticeIndex(group.progressIndex || 0);
+    setPracticePageStart(0); // Will be synced by useEffect
   };
 
   const closePractice = () => {
+    if (practiceGroup) {
+      onUpdateGroup({ ...practiceGroup, progressIndex: practiceIndex });
+    }
     setPracticeGroup(null);
     setPracticeIndex(0);
     setPracticePageStart(0);
   };
+
+  // Auto-save progress
+  useEffect(() => {
+    if (practiceGroup && practiceIndex !== practiceGroup.progressIndex) {
+      const timeout = setTimeout(() => {
+        onUpdateGroup({ ...practiceGroup, progressIndex: practiceIndex });
+        setPracticeGroup(prev => prev ? { ...prev, progressIndex: practiceIndex } : null);
+      }, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [practiceIndex, practiceGroup, onUpdateGroup]);
 
   // Practice page sync
   useEffect(() => {
@@ -562,11 +576,11 @@ export const StudyNotes: React.FC<StudyNotesProps> = ({
                 const isTyped = globalIndex < practiceIndex;
                 const isCurrent = globalIndex === practiceIndex;
 
-                let className = "transition-all duration-100 relative ";
+                let className = "transition-all duration-100 relative cursor-pointer hover:bg-stone-200 hover:text-stone-700 rounded-sm ";
                 if (isTyped) {
                   className += "text-ink opacity-100 ";
                 } else if (isCurrent) {
-                  className += "text-stone-500 bg-stone-200 rounded-sm opacity-100 border-b-2 border-blue-500 ";
+                  className += "text-stone-500 bg-stone-200 opacity-100 border-b-2 border-blue-500 ";
                 } else {
                   className += "text-stone-400 opacity-100 ";
                 }
@@ -576,6 +590,8 @@ export const StudyNotes: React.FC<StudyNotesProps> = ({
                     key={globalIndex}
                     className={className}
                     ref={isCurrent ? practiceCharRef : null}
+                    onClick={() => setPracticeIndex(globalIndex)}
+                    title="Buradan başla"
                   >
                     {char}
                   </span>

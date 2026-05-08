@@ -38,6 +38,7 @@ export interface StudyGroup {
   name: string;
   bookId: string;
   entries: StudyNoteEntry[];
+  progressIndex?: number;
   createdAt: number;
 }
 
