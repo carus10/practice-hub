@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Book, CHARS_PER_PAGE, Highlight, StudyGroup } from '../types';
+import { Book, CHARS_PER_PAGE, Highlight, StudyGroup, DictionaryItem } from '../types';
 import { IconArrowLeft, IconDictionary, IconEraser, IconClipboard, IconPlus } from './Icons';
 
 interface ReaderProps {

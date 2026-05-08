@@ -238,43 +238,54 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
 
     if (!mode) {
         return (
-            <div className="max-w-3xl mx-auto p-6 animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col min-h-[70vh]">
-                <header className="flex items-center gap-4 mb-10 border-b border-stone-200 pb-6 mt-4">
-                    <button onClick={onExit} className="p-2 rounded-full hover:bg-stone-200 transition-colors">
-                        <IconArrowLeft />
+            <div className="max-w-5xl mx-auto p-8 animate-in fade-in zoom-in-95 duration-700 flex flex-col min-h-[80vh] relative selection:bg-accent/30">
+                {/* Decorative background blurs just for this screen */}
+                <div className="absolute top-0 left-0 w-72 h-72 bg-emerald-200/20 rounded-full blur-[80px] -z-10"></div>
+                <div className="absolute bottom-0 right-0 w-72 h-72 bg-blue-200/20 rounded-full blur-[80px] -z-10"></div>
+
+                <header className="flex flex-col items-center text-center mb-16 mt-8 relative z-10 w-full">
+                    <button onClick={onExit} className="absolute left-0 top-0 p-3 rounded-xl hover:bg-white/80 hover:shadow-sm transition-all border border-transparent hover:border-stone-200 flex items-center gap-2 text-stone-500 hover:text-ink bg-white/40 backdrop-blur-md">
+                        <IconArrowLeft /> <span className="text-sm font-medium">Geri Dön</span>
                     </button>
-                    <div>
-                        <h2 className="text-3xl font-serif text-ink tracking-tight">Pratik Modu</h2>
-                        <p className="text-stone-500 mt-1">Öğrenmek istediğiniz yeteneği seçin.</p>
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-white to-stone-50 shadow-md border border-white mb-6 transform rotate-3">
+                        <span className="text-3xl transform -rotate-3">🎯</span>
                     </div>
+                    <h2 className="text-4xl md:text-5xl font-serif text-ink tracking-tight mb-4">Pratik Modu</h2>
+                    <p className="text-stone-500 text-lg max-w-md mx-auto leading-relaxed">Öğrenmek ve test etmek istediğiniz yeteneği seçerek antrenmana başlayın.</p>
                 </header>
 
-                <div className="grid md:grid-cols-3 gap-6 flex-1 items-start">
+                <div className="grid md:grid-cols-3 gap-8 flex-1 items-stretch relative z-10">
+                    {/* Card 1 */}
                     <button 
                         onClick={() => startPractice('WORD_TO_MEANING')}
-                        className="group flex flex-col p-6 rounded-2xl border-2 border-stone-200 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left shadow-sm hover:shadow-md"
+                        className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-emerald-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(16,185,129,0.1)] hover:-translate-y-2 relative overflow-hidden"
                     >
-                        <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition-transform">🇹🇷</div>
-                        <h3 className="font-serif text-xl text-ink font-medium mb-2">Kelime → Anlam</h3>
-                        <p className="text-sm text-stone-500 leading-relaxed">Kelimeyi görün ve Türkçe anlamını tahmin etmeye çalışın.</p>
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-500 rotate-[-2deg] group-hover:rotate-0">🇹🇷</div>
+                        <h3 className="font-serif text-2xl text-ink font-medium mb-3">Kelime → Anlam</h3>
+                        <p className="text-sm text-stone-500 leading-relaxed font-medium">İngilizce kelimeyi görün ve Türkçe anlamını tahmin etmeye çalışın.</p>
                     </button>
 
+                    {/* Card 2 */}
                     <button 
                         onClick={() => startPractice('MEANING_TO_WORD')}
-                        className="group flex flex-col p-6 rounded-2xl border-2 border-stone-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-left shadow-sm hover:shadow-md"
+                        className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-blue-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(59,130,246,0.1)] hover:-translate-y-2 relative overflow-hidden delay-75"
                     >
-                        <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition-transform">🇬🇧</div>
-                        <h3 className="font-serif text-xl text-ink font-medium mb-2">Anlam → Kelime</h3>
-                        <p className="text-sm text-stone-500 leading-relaxed">Türkçe anlamı verilen kelimenin İngilizcesini hatırlayın.</p>
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-500 rotate-2 group-hover:rotate-0">🇬🇧</div>
+                        <h3 className="font-serif text-2xl text-ink font-medium mb-3">Anlam → Kelime</h3>
+                        <p className="text-sm text-stone-500 leading-relaxed font-medium">Türkçe anlamı verilen kelimenin İngilizcesini hatırlayın ve yazın.</p>
                     </button>
 
+                    {/* Card 3 */}
                     <button 
                         onClick={() => startPractice('FILL_BLANK')}
-                        className="group flex flex-col p-6 rounded-2xl border-2 border-stone-200 hover:border-amber-400 hover:bg-amber-50 transition-all text-left shadow-sm hover:shadow-md"
+                        className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-amber-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(245,158,11,0.1)] hover:-translate-y-2 relative overflow-hidden delay-150"
                     >
-                        <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-4 text-2xl group-hover:scale-110 transition-transform">🧩</div>
-                        <h3 className="font-serif text-xl text-ink font-medium mb-2">Boşluk Doldurma</h3>
-                        <p className="text-sm text-stone-500 leading-relaxed">Örnek cümleyi okuyun ve eksik olan kelimeyi bulun.</p>
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-500 rotate-[-2deg] group-hover:rotate-0">🧩</div>
+                        <h3 className="font-serif text-2xl text-ink font-medium mb-3">Boşluk Doldurma</h3>
+                        <p className="text-sm text-stone-500 leading-relaxed font-medium">Örnek cümleyi okuyun ve eksik olan bağlamdaki kelimeyi bulun.</p>
                     </button>
                 </div>
             </div>

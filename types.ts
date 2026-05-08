@@ -15,6 +15,7 @@ export interface Book {
   mode: BookMode;
   highlights: Highlight[];
   coverImage?: string;
+  lastAccessedAt?: number;
 }
 
 export interface DictionaryItem {

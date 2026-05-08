@@ -25,6 +25,12 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   const [newBookCover, setNewBookCover] = useState<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, bookId: string } | null>(null);
   const [editingBookId, setEditingBookId] = useState<string | null>(null);
+  
+  // New features state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterMode, setFilterMode] = useState<'all' | BookMode>('all');
+  const [greeting, setGreeting] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const editCoverInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +38,13 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
     window.addEventListener('click', handleClickOutside);
+    
+    // Greeting logic
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Günaydın');
+    else if (hour < 18) setGreeting('İyi Günler');
+    else setGreeting('İyi Akşamlar');
+    
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
@@ -222,48 +235,142 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
     }
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 min-h-screen">
-      <header className="flex justify-between items-center mb-12 mt-6 border-b border-stone-300 pb-6">
-        <div>
-          <h1 className="text-4xl font-serif text-ink tracking-tight mb-2">Pratik Hub</h1>
-          <p className="text-stone-500 font-sans text-sm">Minimalist Çalışma İstasyonu</p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={onOpenDictionary}
-            className="flex items-center gap-2 bg-white border border-stone-300 text-stone-600 px-4 py-2.5 rounded-lg hover:bg-stone-50 transition-all shadow-sm"
-          >
-            <IconDictionary />
-            <span className="hidden sm:inline">Sözlük</span>
-          </button>
-          <button
-            onClick={onOpenStudyNotes}
-            className="flex items-center gap-2 bg-white border border-stone-300 text-stone-600 px-4 py-2.5 rounded-lg hover:bg-stone-50 transition-all shadow-sm"
-          >
-            <IconNotes />
-            <span className="hidden sm:inline">Ders Notları</span>
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-ink text-paper px-5 py-2.5 rounded-lg hover:bg-stone-700 transition-all shadow-sm"
-          >
-            <IconPlus />
-            <span className="hidden sm:inline">Yeni Ekle</span>
-            <span className="sm:hidden">Ekle</span>
-          </button>
-        </div>
-      </header>
+  const totalBooks = books.length;
+  const averageProgress = totalBooks > 0 
+    ? Math.round(books.reduce((acc, book) => acc + Math.min(100, (book.progressIndex / Math.max(1, book.content.length)) * 100), 0) / totalBooks) 
+    : 0;
+  const latestBook = books.length > 0 ? [...books].sort((a, b) => (b.lastAccessedAt || b.createdAt) - (a.lastAccessedAt || a.createdAt))[0] : null;
 
-      {books.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-xl border border-stone-200 shadow-sm">
-          <div className="text-stone-300 mb-4 flex justify-center"><IconBook /></div>
-          <h3 className="text-xl font-serif text-stone-600 mb-2">Kitaplığınız Boş</h3>
-          <p className="text-stone-400 max-w-xs mx-auto">Sağ üstteki butona tıklayarak metin ekleyin. Kelime öğrenme veya ders tekrarı modlarını deneyin.</p>
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterMode === 'all' || book.mode === filterMode;
+    return matchesSearch && matchesFilter;
+  });
+
+  return (
+    <div className="flex h-screen bg-[#faf9f6] overflow-hidden font-sans selection:bg-accent/30 relative">
+      {/* Background Subtle Dot Pattern */}
+      <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(#d6d3d1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      
+      {/* LEFT SIDEBAR */}
+      <aside className="relative z-10 w-64 bg-white/80 backdrop-blur-xl border-r border-stone-200/70 flex flex-col justify-between py-8 px-6 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div>
+          <div className="mb-10 pl-2">
+            <h1 className="text-3xl font-serif text-ink tracking-tight flex items-center gap-2">
+              <span className="font-medium">Pratik</span><span className="font-light italic text-accent">Hub</span>
+            </h1>
+            <p className="text-stone-400 font-sans text-[10px] uppercase tracking-widest mt-2">Çalışma İstasyonu</p>
+          </div>
+          
+          <div className="mb-10 pl-2">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">{greeting},</p>
+            <p className="text-lg text-ink font-light mt-1">Odaklanma vakti.</p>
+          </div>
+
+          <nav className="space-y-2">
+             <button onClick={onOpenDictionary} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-stone-600 rounded-xl hover:bg-stone-50 hover:shadow-sm hover:text-ink transition-all border border-transparent hover:border-stone-200 group">
+               <span className="text-stone-400 group-hover:text-ink transition-colors"><IconDictionary /></span>
+               Sözlük
+             </button>
+             <button onClick={onOpenStudyNotes} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-stone-600 rounded-xl hover:bg-stone-50 hover:shadow-sm hover:text-ink transition-all border border-transparent hover:border-stone-200 group">
+               <span className="text-stone-400 group-hover:text-ink transition-colors"><IconNotes /></span>
+               Ders Notları
+             </button>
+          </nav>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {books.map((book) => (
+
+        <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center gap-2 bg-ink text-paper px-4 py-3.5 rounded-xl hover:bg-stone-800 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] font-medium text-sm group active:scale-95">
+          <IconPlus /> <span>Yeni İçerik Ekle</span>
+        </button>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
+      <main className="relative z-10 flex-1 overflow-y-auto px-8 md:px-12 py-10 custom-scrollbar">
+        
+        {/* Top Header: Search */}
+        <header className="flex justify-between items-center mb-10">
+           <div className="relative w-full max-w-md animate-in slide-in-from-top-4 fade-in duration-500">
+             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+             </span>
+             <input 
+               type="text" 
+               placeholder="Kitaplıktan eser ismi ara..." 
+               value={searchQuery}
+               onChange={e => setSearchQuery(e.target.value)}
+               className="w-full pl-11 pr-4 py-3 bg-white/70 backdrop-blur-md border border-stone-200/80 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/40 shadow-sm text-sm text-ink placeholder-stone-400 transition-all"
+             />
+           </div>
+        </header>
+
+        {/* Dashboard Stats Row */}
+        {books.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 animate-in slide-in-from-bottom-4 fade-in duration-700">
+            {/* Stat 1 */}
+            <div className="bg-white/80 backdrop-blur-md p-5 rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex items-center gap-5">
+               <div className="w-14 h-14 rounded-2xl bg-orange-50/80 flex items-center justify-center text-accent/80 border border-orange-100"><IconBook /></div>
+               <div>
+                  <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-widest mb-1">Toplam Materyal</p>
+                  <p className="text-3xl font-serif text-ink leading-none">{totalBooks}</p>
+               </div>
+            </div>
+            {/* Stat 2 */}
+            <div className="bg-white/80 backdrop-blur-md p-5 rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex items-center gap-5">
+               <div className="w-14 h-14 rounded-2xl bg-emerald-50/80 flex items-center justify-center text-emerald-600/80 border border-emerald-100">
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+               </div>
+               <div>
+                  <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-widest mb-1">Ortalama İlerleme</p>
+                  <p className="text-3xl font-serif text-ink leading-none">%{averageProgress}</p>
+               </div>
+            </div>
+            {/* Stat 3: Kaldığın Yerden */}
+            {latestBook && (
+              <div 
+                className="bg-white/80 backdrop-blur-md p-5 rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex items-center gap-5 hover:border-accent/30 hover:shadow-lg transition-all cursor-pointer group active:scale-[0.98]" 
+                onClick={() => onSelectBook(latestBook)}
+              >
+                 <div className="w-14 h-14 rounded-2xl bg-blue-50/80 flex items-center justify-center text-blue-600/80 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ml-1"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-stone-400 font-semibold uppercase tracking-widest mb-1">Kaldığın Yerden</p>
+                    <p className="text-lg font-serif text-ink truncate font-medium">{latestBook.title}</p>
+                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Filters */}
+        {books.length > 0 && (
+          <div className="flex items-center gap-3 mb-8 overflow-x-auto pb-2 no-scrollbar animate-in fade-in duration-1000 delay-150">
+             <button onClick={() => setFilterMode('all')} className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all ${filterMode === 'all' ? 'bg-ink text-white shadow-md' : 'bg-white/70 backdrop-blur-sm text-stone-500 border border-stone-200/60 hover:bg-white hover:text-ink hover:border-stone-300'}`}>TÜMÜ</button>
+             <button onClick={() => setFilterMode('normal')} className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all flex items-center gap-2 ${filterMode === 'normal' ? 'bg-stone-600 text-white shadow-md' : 'bg-white/70 backdrop-blur-sm text-stone-500 border border-stone-200/60 hover:bg-white hover:text-ink hover:border-stone-300'}`}>Normal</button>
+             <button onClick={() => setFilterMode('study')} className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all flex items-center gap-2 ${filterMode === 'study' ? 'bg-blue-600 text-white shadow-md' : 'bg-white/70 backdrop-blur-sm text-stone-500 border border-stone-200/60 hover:bg-white hover:text-ink hover:border-stone-300'}`}>Ders Çalışma</button>
+             <button onClick={() => setFilterMode('language')} className={`px-5 py-2 rounded-full text-xs font-semibold tracking-wide transition-all flex items-center gap-2 ${filterMode === 'language' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white/70 backdrop-blur-sm text-stone-500 border border-stone-200/60 hover:bg-white hover:text-ink hover:border-stone-300'}`}>Dil Öğrenme</button>
+          </div>
+        )}
+
+        {/* Content Area */}
+        {books.length === 0 ? (
+          <div className="text-center py-32 bg-white/50 backdrop-blur-sm rounded-3xl border border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 rounded-full bg-stone-100/80 flex items-center justify-center text-stone-300 mb-6 border border-white shadow-inner">
+               <IconBook />
+            </div>
+            <h3 className="text-2xl font-serif text-ink mb-3">Kitaplığınız Bomboş</h3>
+            <p className="text-stone-500 max-w-sm mx-auto text-sm leading-relaxed mb-8">Sol menüdeki "Yeni İçerik Ekle" butonuna tıklayarak hemen pratik yapmaya veya ders çalışmaya başlayın.</p>
+            <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 bg-ink text-paper px-6 py-3 rounded-xl hover:bg-stone-800 transition-all shadow-md font-medium text-sm">
+              <IconPlus /> <span>İlk Metni Ekle</span>
+            </button>
+          </div>
+        ) : filteredBooks.length === 0 ? (
+          <div className="text-center py-20">
+             <p className="text-stone-500">Aramanıza uygun sonuç bulunamadı.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-in slide-in-from-bottom-8 fade-in duration-1000 delay-300">
+            {filteredBooks.map((book) => (
             <div
               key={book.id}
               className="group relative bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-[22rem]"
@@ -327,6 +434,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
           ))}
         </div>
       )}
+      </main>
 
       {/* Context Menu */}
       {contextMenu && (

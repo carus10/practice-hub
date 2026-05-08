@@ -96,20 +96,22 @@ const App: React.FC = () => {
   };
 
   const handleSelectBook = (book: Book) => {
-    setActiveBook(book);
+    const updatedBook = { ...book, lastAccessedAt: Date.now() };
+    setBooks(prev => prev.map(b => b.id === book.id ? updatedBook : b));
+    setActiveBook(updatedBook);
     setView(AppView.READER);
   };
 
   const handleUpdateProgress = (bookId: string, newIndex: number) => {
     setBooks(prev => prev.map(b => {
       if (b.id === bookId) {
-        return { ...b, progressIndex: newIndex };
+        return { ...b, progressIndex: newIndex, lastAccessedAt: Date.now() };
       }
       return b;
     }));
     
     if (activeBook && activeBook.id === bookId) {
-        setActiveBook(prev => prev ? ({...prev, progressIndex: newIndex}) : null);
+        setActiveBook(prev => prev ? ({...prev, progressIndex: newIndex, lastAccessedAt: Date.now()}) : null);
     }
   };
 
@@ -241,47 +243,51 @@ const App: React.FC = () => {
     <div className="font-sans text-ink antialiased bg-paper min-h-screen selection:bg-stone-200 selection:text-ink">
       {view === AppView.WELCOME ? (
         <WelcomeScreen onEnter={() => setView(AppView.LIBRARY)} />
-      ) : view === AppView.LIBRARY ? (
-        <Library 
-          books={books} 
-          onAddBook={handleAddBook} 
-          onSelectBook={handleSelectBook}
-          onDeleteBook={handleDeleteBook}
-          onUpdateBook={handleUpdateBook}
-          onOpenDictionary={() => setView(AppView.DICTIONARY)}
-          onOpenStudyNotes={() => setView(AppView.STUDY_NOTES)}
-        />
-      ) : view === AppView.DICTIONARY ? (
-        <Dictionary 
-            items={dictionary}
-            books={books}
-            onBack={() => setView(AppView.LIBRARY)}
-            onUpdateItem={handleUpdateDictionaryItem}
-            onDeleteItem={handleDeleteDictionaryItem}
-        />
-      ) : view === AppView.STUDY_NOTES ? (
-        <StudyNotes
-            groups={studyGroups}
-            books={books}
-            onBack={() => setView(AppView.LIBRARY)}
-            onUpdateGroup={handleUpdateStudyGroup}
-            onDeleteGroup={handleDeleteStudyGroup}
-            onDeleteEntry={handleDeleteStudyEntry}
-        />
       ) : (
-        activeBook && (
-          <Reader 
-            book={activeBook} 
-            dictionary={dictionary}
-            onBack={() => setView(AppView.LIBRARY)} 
-            onUpdateProgress={handleUpdateProgress}
-            onAddHighlight={handleAddHighlight}
-            onAddToDictionary={handleAddToDictionary}
-            studyGroups={studyGroups.filter(g => g.bookId === activeBook.id)}
-            onCreateStudyGroup={handleCreateStudyGroup}
-            onAddToStudyGroup={handleAddToStudyGroup}
-          />
-        )
+        <div key={view} className="page-transition">
+          {view === AppView.LIBRARY ? (
+            <Library 
+              books={books} 
+              onAddBook={handleAddBook} 
+              onSelectBook={handleSelectBook}
+              onDeleteBook={handleDeleteBook}
+              onUpdateBook={handleUpdateBook}
+              onOpenDictionary={() => setView(AppView.DICTIONARY)}
+              onOpenStudyNotes={() => setView(AppView.STUDY_NOTES)}
+            />
+          ) : view === AppView.DICTIONARY ? (
+            <Dictionary 
+                items={dictionary}
+                books={books}
+                onBack={() => setView(AppView.LIBRARY)}
+                onUpdateItem={handleUpdateDictionaryItem}
+                onDeleteItem={handleDeleteDictionaryItem}
+            />
+          ) : view === AppView.STUDY_NOTES ? (
+            <StudyNotes
+                groups={studyGroups}
+                books={books}
+                onBack={() => setView(AppView.LIBRARY)}
+                onUpdateGroup={handleUpdateStudyGroup}
+                onDeleteGroup={handleDeleteStudyGroup}
+                onDeleteEntry={handleDeleteStudyEntry}
+            />
+          ) : (
+            activeBook && (
+              <Reader 
+                book={activeBook} 
+                dictionary={dictionary}
+                onBack={() => setView(AppView.LIBRARY)} 
+                onUpdateProgress={handleUpdateProgress}
+                onAddHighlight={handleAddHighlight}
+                onAddToDictionary={handleAddToDictionary}
+                studyGroups={studyGroups.filter(g => g.bookId === activeBook.id)}
+                onCreateStudyGroup={handleCreateStudyGroup}
+                onAddToStudyGroup={handleAddToStudyGroup}
+              />
+            )
+          )}
+        </div>
       )}
     </div>
   );

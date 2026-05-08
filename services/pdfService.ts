@@ -630,7 +630,7 @@ export async function extractCoverFromPdf(arrayBuffer: ArrayBuffer): Promise<str
     canvas.height = viewport.height;
     
     // PDF render options
-    const renderContext = {
+    const renderContext: any = {
       canvasContext: context,
       viewport: viewport,
     };
