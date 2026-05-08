@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Library } from './components/Library';
 import { Reader } from './components/Reader';
 import { Dictionary } from './components/Dictionary';
-import { Book, AppView, Highlight, DictionaryItem, DictionaryFolder } from './types';
+import { Book, AppView, Highlight, DictionaryItem } from './types';
 
 const STORAGE_KEY_BOOKS = 'murekkep_books';
 const STORAGE_KEY_DICT = 'murekkep_dictionary';
-const STORAGE_KEY_FOLDERS = 'murekkep_folders';
 
 // ─── SAFE localStorage helpers ───────────────────────────────────
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -30,26 +29,37 @@ function saveToStorage(key: string, data: unknown): void {
   }
 }
 
+// ─── MIGRATION: vocabulary → language, add missing fields ────────
+function migrateBooks(books: Book[]): Book[] {
+  return books.map(b => ({
+    ...b,
+    mode: (b.mode as string) === 'vocabulary' ? 'language' : b.mode,
+  }));
+}
+
+function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
+  return items.map(item => ({
+    ...item,
+    exampleSentence: item.exampleSentence || '',
+    notes: item.notes || '',
+  }));
+}
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.LIBRARY);
 
-  // ─── LAZY INITIALIZATION: data is loaded SYNCHRONOUSLY from localStorage
-  //     BEFORE the first render, so save-effects can never wipe empty state. ──
-  const [books, setBooks] = useState<Book[]>(() => loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, []));
-  const [dictionary, setDictionary] = useState<DictionaryItem[]>(() => loadFromStorage<DictionaryItem[]>(STORAGE_KEY_DICT, []));
-  const [folders, setFolders] = useState<DictionaryFolder[]>(() => loadFromStorage<DictionaryFolder[]>(STORAGE_KEY_FOLDERS, []));
+  // ─── LAZY INITIALIZATION with migration ──
+  const [books, setBooks] = useState<Book[]>(() => migrateBooks(loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, [])));
+  const [dictionary, setDictionary] = useState<DictionaryItem[]>(() => migrateDictionary(loadFromStorage<DictionaryItem[]>(STORAGE_KEY_DICT, [])));
   const [activeBook, setActiveBook] = useState<Book | null>(null);
 
-  // ─── MOUNT GUARD: prevent save-effects from firing on the very first render ──
+  // ─── MOUNT GUARD ──
   const isInitialized = useRef(false);
   useEffect(() => {
-    // Mark as initialized AFTER the first render cycle completes
     isInitialized.current = true;
   }, []);
 
-  // ─── SAFE SAVE EFFECTS ────────────────────────────────────────
-  // These will only write to localStorage AFTER the component has fully
-  // initialized, preventing the "empty array overwrite" race condition.
+  // ─── SAFE SAVE EFFECTS ──
   useEffect(() => {
     if (!isInitialized.current) return;
     saveToStorage(STORAGE_KEY_BOOKS, books);
@@ -59,11 +69,6 @@ const App: React.FC = () => {
     if (!isInitialized.current) return;
     saveToStorage(STORAGE_KEY_DICT, dictionary);
   }, [dictionary]);
-
-  useEffect(() => {
-    if (!isInitialized.current) return;
-    saveToStorage(STORAGE_KEY_FOLDERS, folders);
-  }, [folders]);
 
   const handleAddBook = (book: Book) => {
     setBooks(prev => [book, ...prev]);
@@ -101,47 +106,33 @@ const App: React.FC = () => {
               const currentHighlights = b.highlights || [];
               const { start, end, color } = highlightInput;
               
-              // New Logic: Flatten and merge highlights
-              // 1. Remove any part of existing highlights that overlaps with the new range
               let updatedHighlights = currentHighlights.flatMap(h => {
-                  // No overlap
                   if (h.end <= start || h.start >= end) {
                       return [h];
                   }
-
                   const fragments: Highlight[] = [];
-
-                  // Left remnant
                   if (h.start < start) {
                       fragments.push({ ...h, end: start });
                   }
-
-                  // Right remnant
                   if (h.end > end) {
                       fragments.push({ ...h, start: end });
                   }
-
                   return fragments;
               });
 
-              // 2. Add the new highlight (if color is not null/erased)
               if (color) {
                   updatedHighlights.push({ start, end, color });
               }
 
-              // 3. Sort by start index
               updatedHighlights.sort((a, b) => a.start - b.start);
-
               return { ...b, highlights: updatedHighlights };
           }
           return b;
       }));
 
-      // Also update active book state if necessary
       if (activeBook && activeBook.id === bookId) {
           setActiveBook(prevBook => {
               if (!prevBook) return null;
-              
               const currentHighlights = prevBook.highlights || [];
               const { start, end, color } = highlightInput;
 
@@ -163,11 +154,14 @@ const App: React.FC = () => {
       }
   };
 
-  const handleAddToDictionary = (word: string, definition: string) => {
+  // ─── DICTIONARY HANDLERS (rich fields) ──
+  const handleAddToDictionary = (word: string, definition: string, exampleSentence: string, notes: string) => {
       const newItem: DictionaryItem = {
           id: crypto.randomUUID(),
           word,
           definition,
+          exampleSentence,
+          notes,
           sourceBookId: activeBook?.id,
           createdAt: Date.now()
       };
@@ -180,26 +174,6 @@ const App: React.FC = () => {
 
   const handleDeleteDictionaryItem = (id: string) => {
       setDictionary(prev => prev.filter(item => item.id !== id));
-  };
-
-  // Folder Handlers
-  const handleCreateFolder = (name: string) => {
-    const newFolder: DictionaryFolder = {
-      id: crypto.randomUUID(),
-      name,
-      createdAt: Date.now()
-    };
-    setFolders(prev => [...prev, newFolder]);
-  };
-
-  const handleUpdateFolder = (id: string, name: string) => {
-    setFolders(prev => prev.map(f => f.id === id ? { ...f, name } : f));
-  };
-
-  const handleDeleteFolder = (id: string) => {
-    setFolders(prev => prev.filter(f => f.id !== id));
-    // When deleting a folder, move items back to Uncategorized (remove folderId)
-    setDictionary(prev => prev.map(item => item.folderId === id ? { ...item, folderId: undefined } : item));
   };
 
   return (
@@ -215,13 +189,10 @@ const App: React.FC = () => {
       ) : view === AppView.DICTIONARY ? (
         <Dictionary 
             items={dictionary}
-            folders={folders}
+            books={books}
             onBack={() => setView(AppView.LIBRARY)}
             onUpdateItem={handleUpdateDictionaryItem}
             onDeleteItem={handleDeleteDictionaryItem}
-            onCreateFolder={handleCreateFolder}
-            onUpdateFolder={handleUpdateFolder}
-            onDeleteFolder={handleDeleteFolder}
         />
       ) : (
         activeBook && (

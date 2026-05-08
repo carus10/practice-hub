@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Book, CHARS_PER_PAGE, Highlight, DictionaryItem } from '../types';
-import { IconArrowLeft, IconPen, IconDictionary, IconEraser } from './Icons';
+import { Book, CHARS_PER_PAGE, Highlight } from '../types';
+import { IconArrowLeft, IconDictionary, IconEraser } from './Icons';
 
 interface ReaderProps {
   book: Book;
   onBack: () => void;
   onUpdateProgress: (bookId: string, newIndex: number) => void;
   onAddHighlight: (bookId: string, highlight: Omit<Highlight, 'color'> & { color: 'red' | 'blue' | 'green' | null }) => void;
-  onAddToDictionary: (word: string, definition: string) => void;
+  onAddToDictionary: (word: string, definition: string, exampleSentence: string, notes: string) => void;
 }
 
 export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, onAddHighlight, onAddToDictionary }) => {
@@ -18,9 +18,11 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
   const [selectionRange, setSelectionRange] = useState<{start: number, end: number, top: number, left: number} | null>(null);
   const [selectedText, setSelectedText] = useState('');
   
-  // Dictionary Modal State (within Reader)
+  // Dictionary Modal State (rich fields)
   const [showDictModal, setShowDictModal] = useState(false);
   const [dictDefinition, setDictDefinition] = useState('');
+  const [dictExample, setDictExample] = useState('');
+  const [dictNotes, setDictNotes] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
@@ -54,12 +56,9 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         return;
     }
 
-    // Attempt to find start and end indices relative to the page content
-    // We rely on the fact that chars are wrapped in spans with data-index
     let startNode = range.startContainer;
     let endNode = range.endContainer;
 
-    // Navigate up to the span if selection started inside the text node
     if (startNode.nodeType === 3 && startNode.parentElement?.tagName === 'SPAN') {
         startNode = startNode.parentElement;
     }
@@ -73,13 +72,12 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
 
         if (startIndex !== -1 && endIndex !== -1) {
             const rect = range.getBoundingClientRect();
-            // Normalize indices
             const s = Math.min(startIndex, endIndex);
             const e = Math.max(startIndex, endIndex);
             
             setSelectionRange({
                 start: s,
-                end: e + 1, // +1 because slice is exclusive
+                end: e + 1,
                 top: rect.top,
                 left: rect.left + (rect.width / 2)
             });
@@ -96,7 +94,6 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
             color
         });
         setSelectionRange(null);
-        // Clear browser selection
         window.getSelection()?.removeAllRanges();
     }
   };
@@ -106,16 +103,26 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
   };
 
   const saveToDictionary = () => {
-      onAddToDictionary(selectedText, dictDefinition);
+      onAddToDictionary(selectedText, dictDefinition, dictExample, dictNotes);
+      closeDictModal();
+  };
+
+  const skipToDictionary = () => {
+      onAddToDictionary(selectedText, '', '', '');
+      closeDictModal();
+  };
+
+  const closeDictModal = () => {
       setShowDictModal(false);
       setDictDefinition('');
+      setDictExample('');
+      setDictNotes('');
       setSelectionRange(null);
       window.getSelection()?.removeAllRanges();
   };
 
   // Keyboard Handling
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Ignore typing if modal is open
     if (showDictModal) return;
 
     if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
@@ -175,7 +182,7 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         </button>
         <div className="flex flex-col items-center">
              <h2 className="font-serif text-ink font-medium text-lg truncate max-w-md px-4">{book.title}</h2>
-             {book.mode === 'vocabulary' && <span className="text-xs text-purple-600 bg-purple-50 px-2 rounded-full">Kelime Öğrenme Modu</span>}
+             {book.mode === 'language' && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 rounded-full">Dil Öğrenme Modu</span>}
              {book.mode === 'study' && <span className="text-xs text-blue-600 bg-blue-50 px-2 rounded-full">Ders Tekrar Modu</span>}
         </div>
         
@@ -196,7 +203,6 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
             const isTyped = globalIndex < currentIndex;
             const isCurrent = globalIndex === currentIndex;
             
-            // Check Highlights
             const highlight = book.highlights?.find(h => globalIndex >= h.start && globalIndex < h.end);
 
             let className = "transition-all duration-100 relative ";
@@ -208,12 +214,10 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
               className += "text-stone-400 opacity-100 ";
             }
             
-            // Highlight Styles
             if (highlight) {
                 if (highlight.color === 'red') className += " bg-red-100/50 box-decoration-clone";
                 if (highlight.color === 'blue') className += " bg-blue-100/50 box-decoration-clone";
                 if (highlight.color === 'green') className += " bg-green-100/50 box-decoration-clone";
-                // Underline effect for better visibility
                 if (highlight.color === 'red') className += " decoration-red-400 underline decoration-2";
                 if (highlight.color === 'blue') className += " decoration-blue-400 underline decoration-2";
                 if (highlight.color === 'green') className += " decoration-green-400 underline decoration-2";
@@ -234,7 +238,7 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
       </div>
 
       {/* Floating Toolbar for Selection */}
-      {selectionRange && (book.mode === 'study' || book.mode === 'vocabulary') && (
+      {selectionRange && (book.mode === 'study' || book.mode === 'language') && (
         <div 
             className="fixed bg-white shadow-xl rounded-lg p-2 border border-stone-200 z-50 flex gap-2 animate-in fade-in zoom-in duration-200"
             style={{ 
@@ -253,10 +257,10 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
                     </button>
                 </>
             )}
-            {book.mode === 'vocabulary' && (
+            {book.mode === 'language' && (
                  <button 
                     onClick={initAddToDictionary}
-                    className="flex items-center gap-2 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium"
+                    className="flex items-center gap-2 px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-sm font-medium"
                  >
                     <IconDictionary />
                     Sözlüğe Ekle
@@ -265,30 +269,89 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         </div>
       )}
 
-      {/* Dictionary Add Modal */}
+      {/* ─── RICH Dictionary Add Modal ─── */}
       {showDictModal && (
           <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-              <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6">
-                  <h3 className="text-xl font-serif text-ink mb-4">Sözlüğe Ekle</h3>
-                  <div className="mb-4">
-                      <label className="text-xs text-stone-500 uppercase font-bold">Kelime</label>
-                      <p className="text-lg font-medium text-stone-900 p-3 bg-white border border-stone-300 rounded-lg shadow-sm">{selectedText}</p>
+              <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+                  {/* Modal Header */}
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200">
+                      <h3 className="text-xl font-serif text-ink">Sözlüğe Ekle</h3>
+                      <p className="text-stone-500 text-sm mt-1">Detayları şimdi ekleyebilir veya atlayarak sonra düzenleyebilirsiniz.</p>
                   </div>
-                  <div className="mb-6">
-                      <label className="text-xs text-stone-500 uppercase font-bold mb-1 block">Anlamı (Opsiyonel)</label>
-                      <input 
-                        type="text" 
-                        className="w-full p-3 border border-stone-300 bg-white text-stone-900 rounded-lg focus:outline-none focus:border-stone-500 focus:ring-1 focus:ring-stone-500"
-                        placeholder="Türkçe karşılığını girin..."
-                        value={dictDefinition}
-                        onChange={(e) => setDictDefinition(e.target.value)}
-                        autoFocus
-                        onKeyDown={(e) => e.key === 'Enter' && saveToDictionary()}
-                      />
+
+                  <div className="p-6 space-y-5">
+                      {/* Kelime (readonly) */}
+                      <div>
+                          <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">Kelime</label>
+                          <div className="text-xl font-serif font-medium text-ink p-3 bg-stone-50 rounded-lg border border-stone-200">
+                              {selectedText}
+                          </div>
+                      </div>
+
+                      {/* Anlam */}
+                      <div>
+                          <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
+                              Anlam <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
+                          </label>
+                          <input 
+                            type="text" 
+                            className="w-full p-3 border border-stone-300 bg-white text-stone-900 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                            placeholder="Türkçe karşılığını girin..."
+                            value={dictDefinition}
+                            onChange={(e) => setDictDefinition(e.target.value)}
+                            autoFocus
+                          />
+                      </div>
+
+                      {/* Örnek Cümle */}
+                      <div>
+                          <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
+                              Örnek Cümle <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
+                          </label>
+                          <textarea 
+                            className="w-full p-3 border border-stone-300 bg-white text-stone-900 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors resize-none h-20 leading-relaxed"
+                            placeholder="Bu kelimeyi bir cümlede kullanın..."
+                            value={dictExample}
+                            onChange={(e) => setDictExample(e.target.value)}
+                          />
+                      </div>
+
+                      {/* Açıklama / Not */}
+                      <div>
+                          <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
+                              Açıklama / Not <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
+                          </label>
+                          <textarea 
+                            className="w-full p-3 border border-stone-300 bg-white text-stone-900 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors resize-none h-16 leading-relaxed"
+                            placeholder="Ek bilgi, gramer notu, vb..."
+                            value={dictNotes}
+                            onChange={(e) => setDictNotes(e.target.value)}
+                          />
+                      </div>
                   </div>
-                  <div className="flex justify-end gap-2">
-                      <button onClick={() => setShowDictModal(false)} className="px-4 py-2 text-stone-500 hover:bg-stone-100 rounded-lg font-medium">İptal</button>
-                      <button onClick={saveToDictionary} className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg shadow-sm font-medium">Kaydet</button>
+
+                  {/* Modal Footer */}
+                  <div className="px-6 py-4 border-t border-stone-100 bg-stone-50 flex justify-between">
+                      <button 
+                        onClick={closeDictModal} 
+                        className="px-4 py-2.5 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors"
+                      >
+                        İptal
+                      </button>
+                      <div className="flex gap-2">
+                          <button 
+                            onClick={skipToDictionary} 
+                            className="px-5 py-2.5 border border-stone-300 text-stone-600 hover:bg-white rounded-lg font-medium transition-colors"
+                          >
+                            Atla
+                          </button>
+                          <button 
+                            onClick={saveToDictionary} 
+                            className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg shadow-sm font-medium transition-colors"
+                          >
+                            Kaydet
+                          </button>
+                      </div>
                   </div>
               </div>
           </div>

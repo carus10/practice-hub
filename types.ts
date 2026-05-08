@@ -1,4 +1,4 @@
-export type BookMode = 'normal' | 'vocabulary' | 'study';
+export type BookMode = 'normal' | 'language' | 'study';
 
 export interface Highlight {
   start: number;
@@ -16,18 +16,13 @@ export interface Book {
   highlights: Highlight[];
 }
 
-export interface DictionaryFolder {
-  id: string;
-  name: string;
-  createdAt: number;
-}
-
 export interface DictionaryItem {
   id: string;
   word: string;
   definition: string;
-  sourceBookId?: string; // Optional: link back to where it was found
-  folderId?: string;
+  exampleSentence: string;
+  notes: string;
+  sourceBookId?: string;
   createdAt: number;
 }
 

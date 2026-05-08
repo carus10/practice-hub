@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Book, BookMode, ProcessingState } from '../types';
 import { extractTextFromPdf } from '../services/pdfService';
-import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconBrain } from './Icons';
+import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconLanguage } from './Icons';
 
 interface LibraryProps {
   books: Book[];
@@ -86,7 +86,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
 
   const getModeLabel = (mode: BookMode) => {
     switch (mode) {
-      case 'vocabulary': return 'Kelime Öğrenme';
+      case 'language': return 'Dil Öğrenme';
       case 'study': return 'Ders Tekrar';
       default: return 'Normal';
     }
@@ -94,7 +94,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
 
   const getModeIcon = (mode: BookMode) => {
     switch (mode) {
-      case 'vocabulary': return <IconBrain />;
+      case 'language': return <IconLanguage />;
       case 'study': return <IconStudy />;
       default: return <IconBook />;
     }
@@ -102,7 +102,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
 
   const getModeColor = (mode: BookMode) => {
     switch (mode) {
-      case 'vocabulary': return 'bg-purple-100 text-purple-700';
+      case 'language': return 'bg-emerald-100 text-emerald-700';
       case 'study': return 'bg-blue-100 text-blue-700';
       default: return 'bg-stone-100 text-stone-600';
     }
@@ -230,14 +230,14 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                     </button>
                     
                     <button 
-                      onClick={() => setSelectedMode('vocabulary')}
-                      className={`p-3 rounded-lg border text-left flex flex-col gap-1 transition-all ${selectedMode === 'vocabulary' ? 'border-purple-600 bg-purple-50 ring-1 ring-purple-600' : 'border-stone-200 bg-stone-50 hover:bg-white'}`}
+                      onClick={() => setSelectedMode('language')}
+                      className={`p-3 rounded-lg border text-left flex flex-col gap-1 transition-all ${selectedMode === 'language' ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600' : 'border-stone-200 bg-stone-50 hover:bg-white'}`}
                     >
-                      <div className="flex items-center gap-2 mb-1 text-purple-700">
-                        <IconBrain />
-                        <span className="font-semibold text-sm">Kelime Öğrenme</span>
+                      <div className="flex items-center gap-2 mb-1 text-emerald-700">
+                        <IconLanguage />
+                        <span className="font-semibold text-sm">Dil Öğrenme</span>
                       </div>
-                      <p className="text-xs text-stone-500">Seçtiğiniz kelimeleri sözlüğe ekleyin.</p>
+                      <p className="text-xs text-stone-500">Kelimeleri anlam, örnek cümle ve notlarla sözlüğe ekleyin.</p>
                     </button>
 
                     <button 
