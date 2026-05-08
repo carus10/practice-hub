@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Book, BookMode, ProcessingState } from '../types';
-import { extractTextFromPdf } from '../services/pdfService';
+import { extractTextFromPdf, extractCoverFromPdf } from '../services/pdfService';
 import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconLanguage, IconNotes } from './Icons';
 
 interface LibraryProps {
@@ -21,7 +21,55 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   const [repeatCount, setRepeatCount] = useState<number>(1);
   const [processing, setProcessing] = useState<ProcessingState>({ isProcessing: false, message: '' });
   const [bookToDelete, setBookToDelete] = useState<string | null>(null);
+  const [newBookCover, setNewBookCover] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const getMeshGradient = (id: string) => {
+    const gradients = [
+      'bg-gradient-to-br from-rose-400 via-fuchsia-500 to-indigo-500',
+      'bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600',
+      'bg-gradient-to-br from-amber-300 via-orange-400 to-rose-500',
+      'bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600',
+      'bg-gradient-to-br from-stone-400 via-stone-500 to-stone-700',
+    ];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+       alert('Lütfen geçerli bir resim dosyası seçin.');
+       return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            
+            const scale = Math.min(1.0, 400 / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            setNewBookCover(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        if (typeof event.target?.result === 'string') {
+            img.src = event.target.result;
+        }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,6 +89,13 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
 
     try {
       const arrayBuffer = await file.arrayBuffer();
+      
+      // Extract cover in parallel
+      const arrayBufferCopy = arrayBuffer.slice(0);
+      extractCoverFromPdf(arrayBufferCopy).then(cover => {
+          if (cover) setNewBookCover(cover);
+      }).catch(err => console.error("Cover extraction failed:", err));
+
       const extractedText = await extractTextFromPdf(arrayBuffer);
       setNewBookContent(extractedText);
       if (!newBookTitle) {
@@ -73,6 +128,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
       createdAt: Date.now(),
       mode: selectedMode,
       highlights: [],
+      coverImage: newBookCover,
     };
 
     onAddBook(newBook);
@@ -81,6 +137,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
     // Reset form
     setNewBookTitle('');
     setNewBookContent('');
+    setNewBookCover(undefined);
     setRepeatCount(1);
     setSelectedMode('normal');
   };
@@ -149,39 +206,55 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
           <p className="text-stone-400 max-w-xs mx-auto">Sağ üstteki butona tıklayarak metin ekleyin. Kelime öğrenme veya ders tekrarı modlarını deneyin.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {books.map((book) => (
             <div
               key={book.id}
-              className="group relative bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300 transition-all cursor-pointer flex flex-col justify-between h-56"
+              className="group relative bg-white rounded-xl border border-stone-200 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-[22rem]"
               onClick={() => onSelectBook(book)}
             >
-              <div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className={`p-1.5 rounded-md ${getModeColor(book.mode || 'normal')}`}>
-                     {getModeIcon(book.mode || 'normal')}
+               {/* Cover Area */}
+               <div className="relative h-[65%] w-full bg-stone-100 overflow-hidden">
+                 {book.coverImage ? (
+                    <img src={book.coverImage} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                 ) : (
+                    <div className={`w-full h-full flex flex-col items-center justify-center p-4 text-center ${getMeshGradient(book.id)} group-hover:scale-105 transition-transform duration-500`}>
+                       <span className="text-white/80 drop-shadow-sm text-4xl mb-3">{getModeIcon(book.mode || 'normal')}</span>
+                       <h3 className="font-serif text-lg text-white drop-shadow-md line-clamp-3 font-semibold leading-snug">{book.title}</h3>
+                    </div>
+                 )}
+                 
+                 {/* Mode Badge Overlay */}
+                 <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-white/95 backdrop-blur-sm shadow-sm border border-black/5">
+                    <span className={`scale-75 origin-center ${getModeColor(book.mode || 'normal')}`}>{getModeIcon(book.mode || 'normal')}</span>
+                    <span className="text-[9px] font-bold text-stone-700 tracking-wider uppercase">{getModeLabel(book.mode || 'normal')}</span>
+                 </div>
+               </div>
+               
+               {/* Bottom Info Area */}
+               <div className="p-4 flex-1 flex flex-col justify-between bg-white relative z-10 border-t border-stone-100">
+                  <div>
+                    {book.coverImage && (
+                       <h3 className="font-serif text-[15px] leading-tight text-ink line-clamp-2 font-medium mb-1">{book.title}</h3>
+                    )}
+                    <p className="text-stone-400 text-[11px] font-sans">
+                      {new Date(book.createdAt).toLocaleDateString('tr-TR')}
+                    </p>
                   </div>
-                  <span className="text-xs font-medium text-stone-400 uppercase tracking-wide">
-                    {getModeLabel(book.mode || 'normal')}
-                  </span>
-                </div>
-                <h3 className="font-serif text-xl text-ink mb-2 line-clamp-2 font-medium">{book.title}</h3>
-                <p className="text-stone-400 text-xs font-sans">
-                  {new Date(book.createdAt).toLocaleDateString('tr-TR')}
-                </p>
-              </div>
-              
-              <div className="mt-4">
-                <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-stone-600 h-full rounded-full" 
-                    style={{ width: `${Math.min(100, (book.progressIndex / book.content.length) * 100)}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between mt-2 text-xs text-stone-500">
-                  <span>%{(Math.min(100, (book.progressIndex / book.content.length) * 100)).toFixed(0)} tamamlandı</span>
-                </div>
-              </div>
+                  
+                  <div className="mt-2">
+                    <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-stone-600 h-full rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, (book.progressIndex / book.content.length) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between mt-1.5 text-[10px] text-stone-400 font-medium">
+                      <span>İlerleme</span>
+                      <span>%{(Math.min(100, (book.progressIndex / book.content.length) * 100)).toFixed(0)}</span>
+                    </div>
+                  </div>
+               </div>
 
               <button
                 onClick={(e) => {
@@ -270,6 +343,38 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                   value={newBookTitle}
                   onChange={(e) => setNewBookTitle(e.target.value)}
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-stone-600 mb-2">Kapak Görseli (İsteğe Bağlı)</label>
+                <div className="flex items-center gap-4">
+                   {newBookCover ? (
+                      <div className="relative w-16 h-24 rounded-md overflow-hidden shadow-sm border border-stone-200 group">
+                         <img src={newBookCover} alt="Kapak" className="w-full h-full object-cover" />
+                         <button onClick={() => setNewBookCover(undefined)} className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <span className="text-xl">&times;</span>
+                         </button>
+                      </div>
+                   ) : (
+                      <div 
+                         onClick={() => coverInputRef.current?.click()}
+                         className="w-16 h-24 rounded-md border-2 border-dashed border-stone-300 flex flex-col items-center justify-center text-stone-400 hover:text-stone-600 hover:border-stone-400 cursor-pointer transition-colors bg-stone-50"
+                      >
+                         <IconPlus />
+                         <span className="text-[10px] mt-1">Kapak</span>
+                      </div>
+                   )}
+                   <div className="flex-1 text-sm text-stone-500 bg-stone-50 p-3 rounded-lg border border-stone-100">
+                     Özel bir kapak fotoğrafı yükleyebilirsiniz. PDF yüklediğinizde sistem otomatik olarak 1. sayfayı kapağa çevirir.
+                   </div>
+                   <input 
+                     type="file" 
+                     ref={coverInputRef} 
+                     className="hidden" 
+                     accept="image/*" 
+                     onChange={handleCoverUpload}
+                   />
+                </div>
               </div>
 
               {activeTab === 'paste' ? (

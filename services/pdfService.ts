@@ -601,3 +601,46 @@ export async function extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<stri
 
   return finalText;
 }
+
+/**
+ * PDF'in ilk sayfasını canvas kullanarak düşük çözünürlüklü bir JPEG resme çevirir.
+ */
+export async function extractCoverFromPdf(arrayBuffer: ArrayBuffer): Promise<string | undefined> {
+  try {
+    const pdf = await pdfjsLib.getDocument({
+      data: arrayBuffer, 
+      disableFontFace: true, 
+      verbosity: 0,
+    }).promise;
+    
+    if (pdf.numPages === 0) return undefined;
+
+    const page = await pdf.getPage(1);
+    
+    // Daha düşük çözünürlük için scale'i ayarlıyoruz (örneğin genişlik maks 400px olacak şekilde)
+    const originalViewport = page.getViewport({ scale: 1.0 });
+    const scale = Math.min(1.0, 400 / originalViewport.width);
+    const viewport = page.getViewport({ scale });
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return undefined;
+    
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // PDF render options
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    };
+    
+    await page.render(renderContext).promise;
+    
+    // Kaliteyi %80 yaparak base64 string'e dönüştür (boyutu küçültmek için)
+    return canvas.toDataURL('image/jpeg', 0.8);
+  } catch (error) {
+    console.error('PDF kapak resmi çıkarılırken hata oluştu:', error);
+    return undefined;
+  }
+}
