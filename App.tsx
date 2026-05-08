@@ -45,6 +45,8 @@ function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
     exampleSentence: item.exampleSentence || '',
     exampleSentences: item.exampleSentences || (item.exampleSentence ? [item.exampleSentence] : []),
     notes: item.notes || '',
+    difficultyScore: item.difficultyScore ?? 0,
+    lastPracticedAt: item.lastPracticedAt ?? 0,
   }));
 }
 

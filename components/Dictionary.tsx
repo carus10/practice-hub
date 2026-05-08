@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DictionaryItem, Book } from '../types';
 import { IconArrowLeft, IconTrash, IconPen, IconCheck, IconDictionary, IconChevronDown, IconChevronRight, IconBook, IconX } from './Icons';
+import { PracticeMode } from './PracticeMode';
 
 interface DictionaryProps {
   items: DictionaryItem[];
@@ -21,6 +22,7 @@ export const Dictionary: React.FC<DictionaryProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [isPracticing, setIsPracticing] = useState(false);
   
   // Edit state fields
   const [editDefinition, setEditDefinition] = useState('');
@@ -132,6 +134,10 @@ export const Dictionary: React.FC<DictionaryProps> = ({
     return book ? book.title : 'Silinmiş Kitap';
   };
 
+  if (isPracticing) {
+      return <PracticeMode items={items} onUpdateItem={onUpdateItem} onExit={() => setIsPracticing(false)} />;
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6 min-h-screen flex flex-col">
       {/* ─── HEADER ─── */}
@@ -146,6 +152,16 @@ export const Dictionary: React.FC<DictionaryProps> = ({
           <h1 className="text-3xl font-serif text-ink tracking-tight">Sözlüğüm</h1>
           <p className="text-stone-500 font-sans text-sm">{items.length} Kelime</p>
         </div>
+        
+        {items.length > 0 && (
+            <button 
+              onClick={() => setIsPracticing(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all font-medium text-sm group"
+            >
+              <span className="text-xl group-hover:animate-spin">✨</span>
+              Pratik Yap
+            </button>
+        )}
       </header>
 
       <div className="flex flex-col md:flex-row gap-8 flex-1">

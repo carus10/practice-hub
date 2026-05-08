@@ -25,6 +25,8 @@ export interface DictionaryItem {
   notes: string;
   sourceBookId?: string;
   createdAt: number;
+  difficultyScore?: number;
+  lastPracticedAt?: number;
 }
 
 // ─── Ders Notları Sistemi ───────────────────────────────────────
