@@ -3,6 +3,7 @@ import { Library } from './components/Library';
 import { Reader } from './components/Reader';
 import { Dictionary } from './components/Dictionary';
 import { StudyNotes } from './components/StudyNotes';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { Book, AppView, Highlight, DictionaryItem, StudyGroup, StudyNoteEntry } from './types';
 
 const STORAGE_KEY_BOOKS = 'murekkep_books';
@@ -51,7 +52,7 @@ function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
 }
 
 const App: React.FC = () => {
-  const [view, setView] = useState<AppView>(AppView.LIBRARY);
+  const [view, setView] = useState<AppView>(AppView.WELCOME);
 
   // ─── LAZY INITIALIZATION with migration ──
   const [books, setBooks] = useState<Book[]>(() => migrateBooks(loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, [])));
@@ -238,7 +239,9 @@ const App: React.FC = () => {
 
   return (
     <div className="font-sans text-ink antialiased bg-paper min-h-screen selection:bg-stone-200 selection:text-ink">
-      {view === AppView.LIBRARY ? (
+      {view === AppView.WELCOME ? (
+        <WelcomeScreen onEnter={() => setView(AppView.LIBRARY)} />
+      ) : view === AppView.LIBRARY ? (
         <Library 
           books={books} 
           onAddBook={handleAddBook} 

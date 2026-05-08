@@ -47,6 +47,7 @@ export interface StudyGroup {
 }
 
 export enum AppView {
+  WELCOME = 'WELCOME',
   LIBRARY = 'LIBRARY',
   READER = 'READER',
   DICTIONARY = 'DICTIONARY',
