@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Book, BookMode, ProcessingState } from '../types';
 import { extractTextFromPdf, extractCoverFromPdf } from '../services/pdfService';
 import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconLanguage, IconNotes } from './Icons';
