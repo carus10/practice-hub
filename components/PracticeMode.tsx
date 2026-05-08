@@ -38,13 +38,18 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
             return;
         }
 
-        // Weight algorithm: Score (0-5)
+        // Weight algorithm: Score (0-10)
         practiceItems.sort((a, b) => {
             const scoreA = a.difficultyScore || 0;
             const scoreB = b.difficultyScore || 0;
-            // Add a little randomness so it's not strictly deterministic
-            const weightA = scoreA * 2 + Math.random() * 5 - (a.lastPracticedAt ? (Date.now() - a.lastPracticedAt) / 86400000 : 0);
-            const weightB = scoreB * 2 + Math.random() * 5 - (b.lastPracticedAt ? (Date.now() - b.lastPracticedAt) / 86400000 : 0);
+            
+            // Zaman faktörü: Pratik yapılmayan her gün için ağırlık artar. Hiç yapılmadıysa 10 günlük avantaj.
+            const daysSinceA = a.lastPracticedAt ? (Date.now() - a.lastPracticedAt) / 86400000 : 10;
+            const daysSinceB = b.lastPracticedAt ? (Date.now() - b.lastPracticedAt) / 86400000 : 10;
+
+            const weightA = scoreA * 2 + Math.random() * 5 + daysSinceA;
+            const weightB = scoreB * 2 + Math.random() * 5 + daysSinceB;
+            
             return weightB - weightA;
         });
 
@@ -205,14 +210,14 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         if (isCorrect) {
             setFeedback('CORRECT');
             if (backspaceCount > 1) {
-                newScore = Math.min(5, newScore + 1); // Struggled
+                newScore = Math.min(10, newScore + 2); // Struggled
             } else {
                 newScore = Math.max(0, newScore - 1); // Perfect
             }
         } else {
             setFeedback('WRONG');
             setShowAnswer(true);
-            newScore = Math.min(5, newScore + 2); // Failed
+            newScore = Math.min(10, newScore + 4); // Failed
         }
 
         onUpdateItem({
