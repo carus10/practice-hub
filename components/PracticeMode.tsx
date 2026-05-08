@@ -297,10 +297,28 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                          'Boşluğa ne gelmeli?'}
                     </span>
                     <h2 className="text-4xl md:text-5xl font-serif text-ink leading-tight px-4">
-                        {mode === 'FILL_BLANK' ? 
-                            <span className="italic">"{currentQuestion.prompt}"</span> : 
+                        {mode === 'FILL_BLANK' ? (
+                            <span className="italic leading-relaxed">
+                                "
+                                {feedback !== 'IDLE' && currentQuestion.prompt.includes('___') ? (
+                                    currentQuestion.prompt.split('___').map((part, index, arr) => (
+                                        <React.Fragment key={index}>
+                                            {part}
+                                            {index < arr.length - 1 && (
+                                                <span className={`font-bold border-b-[3px] px-1.5 py-0.5 mx-1 rounded-md transition-all duration-500 animate-in zoom-in-95 ${feedback === 'CORRECT' ? 'text-emerald-600 border-emerald-300 bg-emerald-50/80' : 'text-red-500 border-red-300 bg-red-50/80'}`}>
+                                                    {currentQuestion.replacedWord}
+                                                </span>
+                                            )}
+                                        </React.Fragment>
+                                    ))
+                                ) : (
+                                    currentQuestion.prompt
+                                )}
+                                "
+                            </span>
+                        ) : (
                             currentQuestion.prompt
-                        }
+                        )}
                     </h2>
                 </div>
 
