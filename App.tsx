@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Library } from './components/Library';
 import { Reader } from './components/Reader';
 import { Dictionary } from './components/Dictionary';
-import { Book, AppView, Highlight, DictionaryItem } from './types';
+import { StudyNotes } from './components/StudyNotes';
+import { Book, AppView, Highlight, DictionaryItem, StudyGroup, StudyNoteEntry } from './types';
 
 const STORAGE_KEY_BOOKS = 'murekkep_books';
 const STORAGE_KEY_DICT = 'murekkep_dictionary';
+const STORAGE_KEY_STUDY = 'murekkep_study_groups';
 
 // ─── SAFE localStorage helpers ───────────────────────────────────
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -29,7 +31,7 @@ function saveToStorage(key: string, data: unknown): void {
   }
 }
 
-// ─── MIGRATION: vocabulary → language, add missing fields ────────
+// ─── MIGRATION ────────────────────────────────────────────────────
 function migrateBooks(books: Book[]): Book[] {
   return books.map(b => ({
     ...b,
@@ -51,6 +53,7 @@ const App: React.FC = () => {
   // ─── LAZY INITIALIZATION with migration ──
   const [books, setBooks] = useState<Book[]>(() => migrateBooks(loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, [])));
   const [dictionary, setDictionary] = useState<DictionaryItem[]>(() => migrateDictionary(loadFromStorage<DictionaryItem[]>(STORAGE_KEY_DICT, [])));
+  const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(() => loadFromStorage<StudyGroup[]>(STORAGE_KEY_STUDY, []));
   const [activeBook, setActiveBook] = useState<Book | null>(null);
 
   // ─── MOUNT GUARD ──
@@ -70,6 +73,12 @@ const App: React.FC = () => {
     saveToStorage(STORAGE_KEY_DICT, dictionary);
   }, [dictionary]);
 
+  useEffect(() => {
+    if (!isInitialized.current) return;
+    saveToStorage(STORAGE_KEY_STUDY, studyGroups);
+  }, [studyGroups]);
+
+  // ─── BOOK HANDLERS ──
   const handleAddBook = (book: Book) => {
     setBooks(prev => [book, ...prev]);
   };
@@ -154,7 +163,7 @@ const App: React.FC = () => {
       }
   };
 
-  // ─── DICTIONARY HANDLERS (rich fields) ──
+  // ─── DICTIONARY HANDLERS ──
   const handleAddToDictionary = (word: string, definition: string, exampleSentence: string, notes: string) => {
       const newItem: DictionaryItem = {
           id: crypto.randomUUID(),
@@ -176,6 +185,46 @@ const App: React.FC = () => {
       setDictionary(prev => prev.filter(item => item.id !== id));
   };
 
+  // ─── STUDY GROUP HANDLERS ──
+  const handleCreateStudyGroup = (bookId: string, name: string): string => {
+      const newGroup: StudyGroup = {
+          id: crypto.randomUUID(),
+          name,
+          bookId,
+          entries: [],
+          createdAt: Date.now()
+      };
+      setStudyGroups(prev => [...prev, newGroup]);
+      return newGroup.id;
+  };
+
+  const handleAddToStudyGroup = (groupId: string, text: string) => {
+      const newEntry: StudyNoteEntry = {
+          id: crypto.randomUUID(),
+          text,
+          addedAt: Date.now()
+      };
+      setStudyGroups(prev => prev.map(g =>
+          g.id === groupId ? { ...g, entries: [...g.entries, newEntry] } : g
+      ));
+  };
+
+  const handleUpdateStudyGroup = (updatedGroup: StudyGroup) => {
+      setStudyGroups(prev => prev.map(g => g.id === updatedGroup.id ? updatedGroup : g));
+  };
+
+  const handleDeleteStudyGroup = (id: string) => {
+      setStudyGroups(prev => prev.filter(g => g.id !== id));
+  };
+
+  const handleDeleteStudyEntry = (groupId: string, entryId: string) => {
+      setStudyGroups(prev => prev.map(g =>
+          g.id === groupId
+              ? { ...g, entries: g.entries.filter(e => e.id !== entryId) }
+              : g
+      ));
+  };
+
   return (
     <div className="font-sans text-ink antialiased bg-paper min-h-screen selection:bg-stone-200 selection:text-ink">
       {view === AppView.LIBRARY ? (
@@ -185,6 +234,7 @@ const App: React.FC = () => {
           onSelectBook={handleSelectBook}
           onDeleteBook={handleDeleteBook}
           onOpenDictionary={() => setView(AppView.DICTIONARY)}
+          onOpenStudyNotes={() => setView(AppView.STUDY_NOTES)}
         />
       ) : view === AppView.DICTIONARY ? (
         <Dictionary 
@@ -194,6 +244,15 @@ const App: React.FC = () => {
             onUpdateItem={handleUpdateDictionaryItem}
             onDeleteItem={handleDeleteDictionaryItem}
         />
+      ) : view === AppView.STUDY_NOTES ? (
+        <StudyNotes
+            groups={studyGroups}
+            books={books}
+            onBack={() => setView(AppView.LIBRARY)}
+            onUpdateGroup={handleUpdateStudyGroup}
+            onDeleteGroup={handleDeleteStudyGroup}
+            onDeleteEntry={handleDeleteStudyEntry}
+        />
       ) : (
         activeBook && (
           <Reader 
@@ -202,6 +261,9 @@ const App: React.FC = () => {
             onUpdateProgress={handleUpdateProgress}
             onAddHighlight={handleAddHighlight}
             onAddToDictionary={handleAddToDictionary}
+            studyGroups={studyGroups.filter(g => g.bookId === activeBook.id)}
+            onCreateStudyGroup={handleCreateStudyGroup}
+            onAddToStudyGroup={handleAddToStudyGroup}
           />
         )
       )}

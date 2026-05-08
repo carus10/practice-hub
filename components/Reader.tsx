@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Book, CHARS_PER_PAGE, Highlight } from '../types';
-import { IconArrowLeft, IconDictionary, IconEraser } from './Icons';
+import { Book, CHARS_PER_PAGE, Highlight, StudyGroup } from '../types';
+import { IconArrowLeft, IconDictionary, IconEraser, IconClipboard, IconPlus } from './Icons';
 
 interface ReaderProps {
   book: Book;
@@ -8,9 +8,15 @@ interface ReaderProps {
   onUpdateProgress: (bookId: string, newIndex: number) => void;
   onAddHighlight: (bookId: string, highlight: Omit<Highlight, 'color'> & { color: 'red' | 'blue' | 'green' | null }) => void;
   onAddToDictionary: (word: string, definition: string, exampleSentence: string, notes: string) => void;
+  studyGroups: StudyGroup[];
+  onCreateStudyGroup: (bookId: string, name: string) => string;
+  onAddToStudyGroup: (groupId: string, text: string) => void;
 }
 
-export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, onAddHighlight, onAddToDictionary }) => {
+export const Reader: React.FC<ReaderProps> = ({ 
+  book, onBack, onUpdateProgress, onAddHighlight, onAddToDictionary,
+  studyGroups, onCreateStudyGroup, onAddToStudyGroup
+}) => {
   const [currentIndex, setCurrentIndex] = useState(book.progressIndex);
   const [pageStart, setPageStart] = useState(0);
   
@@ -18,11 +24,18 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
   const [selectionRange, setSelectionRange] = useState<{start: number, end: number, top: number, left: number} | null>(null);
   const [selectedText, setSelectedText] = useState('');
   
-  // Dictionary Modal State (rich fields)
+  // Dictionary Modal State
   const [showDictModal, setShowDictModal] = useState(false);
   const [dictDefinition, setDictDefinition] = useState('');
   const [dictExample, setDictExample] = useState('');
   const [dictNotes, setDictNotes] = useState('');
+
+  // Study Group Modal State
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupAddSuccess, setGroupAddSuccess] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
@@ -98,6 +111,7 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
     }
   };
 
+  // ─── DICTIONARY ──
   const initAddToDictionary = () => {
     setShowDictModal(true);
   };
@@ -121,9 +135,47 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
       window.getSelection()?.removeAllRanges();
   };
 
+  // ─── STUDY GROUP ──
+  const initAddToGroup = () => {
+    setShowGroupModal(true);
+    setSelectedGroupId(null);
+    setIsCreatingGroup(false);
+    setNewGroupName('');
+    setGroupAddSuccess(false);
+  };
+
+  const handleGroupSave = () => {
+    if (!selectedGroupId) return;
+    onAddToStudyGroup(selectedGroupId, selectedText);
+    setGroupAddSuccess(true);
+    setTimeout(() => {
+      closeGroupModal();
+    }, 800);
+  };
+
+  const handleCreateAndAdd = () => {
+    if (!newGroupName.trim()) return;
+    const newId = onCreateStudyGroup(book.id, newGroupName.trim());
+    onAddToStudyGroup(newId, selectedText);
+    setGroupAddSuccess(true);
+    setTimeout(() => {
+      closeGroupModal();
+    }, 800);
+  };
+
+  const closeGroupModal = () => {
+    setShowGroupModal(false);
+    setSelectedGroupId(null);
+    setIsCreatingGroup(false);
+    setNewGroupName('');
+    setGroupAddSuccess(false);
+    setSelectionRange(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
   // Keyboard Handling
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (showDictModal) return;
+    if (showDictModal || showGroupModal) return;
 
     if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
       e.preventDefault();
@@ -150,7 +202,7 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
          onUpdateProgress(book.id, newIndex);
       }
     }
-  }, [currentIndex, book.content, book.id, onUpdateProgress, showDictModal]);
+  }, [currentIndex, book.content, book.id, onUpdateProgress, showDictModal, showGroupModal]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -183,7 +235,7 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         <div className="flex flex-col items-center">
              <h2 className="font-serif text-ink font-medium text-lg truncate max-w-md px-4">{book.title}</h2>
              {book.mode === 'language' && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 rounded-full">Dil Öğrenme Modu</span>}
-             {book.mode === 'study' && <span className="text-xs text-blue-600 bg-blue-50 px-2 rounded-full">Ders Tekrar Modu</span>}
+             {book.mode === 'study' && <span className="text-xs text-blue-600 bg-blue-50 px-2 rounded-full">Ders Çalışma Modu</span>}
         </div>
         
         <div className="text-stone-400 font-mono text-sm shrink-0">
@@ -215,12 +267,9 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
             }
             
             if (highlight) {
-                if (highlight.color === 'red') className += " bg-red-100/50 box-decoration-clone";
-                if (highlight.color === 'blue') className += " bg-blue-100/50 box-decoration-clone";
-                if (highlight.color === 'green') className += " bg-green-100/50 box-decoration-clone";
-                if (highlight.color === 'red') className += " decoration-red-400 underline decoration-2";
-                if (highlight.color === 'blue') className += " decoration-blue-400 underline decoration-2";
-                if (highlight.color === 'green') className += " decoration-green-400 underline decoration-2";
+                if (highlight.color === 'red') className += " bg-red-100/50 box-decoration-clone decoration-red-400 underline decoration-2";
+                if (highlight.color === 'blue') className += " bg-blue-100/50 box-decoration-clone decoration-blue-400 underline decoration-2";
+                if (highlight.color === 'green') className += " bg-green-100/50 box-decoration-clone decoration-green-400 underline decoration-2";
             }
 
             return (
@@ -237,13 +286,13 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         </div>
       </div>
 
-      {/* Floating Toolbar for Selection */}
+      {/* ─── Floating Toolbar for Selection ─── */}
       {selectionRange && (book.mode === 'study' || book.mode === 'language') && (
         <div 
             className="fixed bg-white shadow-xl rounded-lg p-2 border border-stone-200 z-50 flex gap-2 animate-in fade-in zoom-in duration-200"
             style={{ 
                 top: Math.max(10, selectionRange.top - 60), 
-                left: Math.max(10, selectionRange.left - (book.mode === 'study' ? 100 : 40)) 
+                left: Math.max(10, selectionRange.left - (book.mode === 'study' ? 140 : 40)) 
             }}
         >
             {book.mode === 'study' && (
@@ -254,6 +303,15 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
                     <div className="w-px bg-stone-200 mx-1"></div>
                     <button onClick={() => applyHighlight(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-600" title="Temizle">
                       <IconEraser />
+                    </button>
+                    <div className="w-px bg-stone-200 mx-1"></div>
+                    <button 
+                      onClick={initAddToGroup}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                      title="Gruba Ekle"
+                    >
+                      <IconClipboard />
+                      Gruba Ekle
                     </button>
                 </>
             )}
@@ -269,26 +327,136 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
         </div>
       )}
 
+      {/* ─── Study Group Add Modal ─── */}
+      {showGroupModal && (
+        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-5 border-b border-stone-200">
+              <h3 className="text-xl font-serif text-ink">Gruba Ekle</h3>
+              <p className="text-stone-500 text-sm mt-1">Seçili metni bir ders notu grubuna ekleyin.</p>
+            </div>
+
+            <div className="p-6">
+              {/* Selected text preview */}
+              <div className="mb-5">
+                <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">Seçili Metin</label>
+                <div className="text-sm text-ink p-3 bg-stone-50 rounded-lg border border-stone-200 max-h-20 overflow-y-auto leading-relaxed">
+                  "{selectedText}"
+                </div>
+              </div>
+
+              {/* Success feedback */}
+              {groupAddSuccess ? (
+                <div className="text-center py-6">
+                  <div className="text-3xl mb-2">✓</div>
+                  <p className="text-emerald-600 font-medium">Gruba eklendi!</p>
+                </div>
+              ) : (
+                <>
+                  {/* Group list or create */}
+                  {studyGroups.length === 0 && !isCreatingGroup ? (
+                    <div className="text-center py-6 bg-amber-50 rounded-xl border border-amber-200 mb-4">
+                      <p className="text-amber-700 font-medium text-sm mb-1">Henüz grup oluşturmadınız</p>
+                      <p className="text-amber-600 text-xs">Lütfen aşağıdaki butonla yeni bir grup oluşturun.</p>
+                    </div>
+                  ) : !isCreatingGroup && (
+                    <div className="mb-4">
+                      <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-2">Grup Seçin</label>
+                      <div className="max-h-40 overflow-y-auto space-y-1 border border-stone-200 rounded-lg p-1">
+                        {studyGroups.map(g => (
+                          <button
+                            key={g.id}
+                            onClick={() => setSelectedGroupId(g.id)}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all ${
+                              selectedGroupId === g.id
+                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                : 'text-stone-700 hover:bg-stone-50'
+                            }`}
+                          >
+                            <span className="font-medium">{g.name}</span>
+                            <span className="text-xs text-stone-400 ml-2">({g.entries.length} not)</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Create new group inline */}
+                  {isCreatingGroup ? (
+                    <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 mb-4">
+                      <label className="block text-xs text-blue-600 uppercase font-bold tracking-wider mb-2">Yeni Grup Oluştur</label>
+                      <input
+                        type="text"
+                        autoFocus
+                        className="w-full p-2.5 text-sm border border-blue-300 rounded-lg bg-white text-stone-900 focus:outline-none focus:border-blue-500 mb-3"
+                        placeholder="Grup adı (örn: Hücre Bölünmesi)"
+                        value={newGroupName}
+                        onChange={e => setNewGroupName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleCreateAndAdd()}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => { setIsCreatingGroup(false); setNewGroupName(''); }}
+                          className="px-3 py-1.5 text-xs text-stone-500 hover:bg-stone-100 rounded-lg"
+                        >İptal</button>
+                        <button
+                          onClick={handleCreateAndAdd}
+                          disabled={!newGroupName.trim()}
+                          className="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 font-medium"
+                        >Oluştur & Ekle</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsCreatingGroup(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors text-sm font-medium mb-4"
+                    >
+                      <IconPlus />
+                      Yeni Grup Oluştur
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!groupAddSuccess && (
+              <div className="px-6 py-4 border-t border-stone-100 bg-stone-50 flex justify-between">
+                <button onClick={closeGroupModal} className="px-4 py-2 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors text-sm">
+                  İptal
+                </button>
+                {!isCreatingGroup && studyGroups.length > 0 && (
+                  <button
+                    onClick={handleGroupSave}
+                    disabled={!selectedGroupId}
+                    className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 font-medium text-sm transition-colors"
+                  >
+                    Ekle
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── RICH Dictionary Add Modal ─── */}
       {showDictModal && (
           <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-                  {/* Modal Header */}
                   <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200">
                       <h3 className="text-xl font-serif text-ink">Sözlüğe Ekle</h3>
                       <p className="text-stone-500 text-sm mt-1">Detayları şimdi ekleyebilir veya atlayarak sonra düzenleyebilirsiniz.</p>
                   </div>
 
                   <div className="p-6 space-y-5">
-                      {/* Kelime (readonly) */}
                       <div>
                           <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">Kelime</label>
                           <div className="text-xl font-serif font-medium text-ink p-3 bg-stone-50 rounded-lg border border-stone-200">
                               {selectedText}
                           </div>
                       </div>
-
-                      {/* Anlam */}
                       <div>
                           <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
                               Anlam <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
@@ -302,8 +470,6 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
                             autoFocus
                           />
                       </div>
-
-                      {/* Örnek Cümle */}
                       <div>
                           <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
                               Örnek Cümle <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
@@ -315,8 +481,6 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
                             onChange={(e) => setDictExample(e.target.value)}
                           />
                       </div>
-
-                      {/* Açıklama / Not */}
                       <div>
                           <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1.5">
                               Açıklama / Not <span className="text-stone-400 normal-case font-normal">— opsiyonel</span>
@@ -330,27 +494,11 @@ export const Reader: React.FC<ReaderProps> = ({ book, onBack, onUpdateProgress, 
                       </div>
                   </div>
 
-                  {/* Modal Footer */}
                   <div className="px-6 py-4 border-t border-stone-100 bg-stone-50 flex justify-between">
-                      <button 
-                        onClick={closeDictModal} 
-                        className="px-4 py-2.5 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors"
-                      >
-                        İptal
-                      </button>
+                      <button onClick={closeDictModal} className="px-4 py-2.5 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors">İptal</button>
                       <div className="flex gap-2">
-                          <button 
-                            onClick={skipToDictionary} 
-                            className="px-5 py-2.5 border border-stone-300 text-stone-600 hover:bg-white rounded-lg font-medium transition-colors"
-                          >
-                            Atla
-                          </button>
-                          <button 
-                            onClick={saveToDictionary} 
-                            className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg shadow-sm font-medium transition-colors"
-                          >
-                            Kaydet
-                          </button>
+                          <button onClick={skipToDictionary} className="px-5 py-2.5 border border-stone-300 text-stone-600 hover:bg-white rounded-lg font-medium transition-colors">Atla</button>
+                          <button onClick={saveToDictionary} className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg shadow-sm font-medium transition-colors">Kaydet</button>
                       </div>
                   </div>
               </div>

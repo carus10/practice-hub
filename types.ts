@@ -26,10 +26,26 @@ export interface DictionaryItem {
   createdAt: number;
 }
 
+// ─── Ders Notları Sistemi ───────────────────────────────────────
+export interface StudyNoteEntry {
+  id: string;
+  text: string;
+  addedAt: number;
+}
+
+export interface StudyGroup {
+  id: string;
+  name: string;
+  bookId: string;
+  entries: StudyNoteEntry[];
+  createdAt: number;
+}
+
 export enum AppView {
   LIBRARY = 'LIBRARY',
   READER = 'READER',
   DICTIONARY = 'DICTIONARY',
+  STUDY_NOTES = 'STUDY_NOTES',
 }
 
 export interface ProcessingState {

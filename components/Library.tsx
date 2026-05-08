@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Book, BookMode, ProcessingState } from '../types';
 import { extractTextFromPdf } from '../services/pdfService';
-import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconLanguage } from './Icons';
+import { IconPlus, IconBook, IconTrash, IconUpload, IconRepeat, IconDictionary, IconStudy, IconLanguage, IconNotes } from './Icons';
 
 interface LibraryProps {
   books: Book[];
@@ -9,9 +9,10 @@ interface LibraryProps {
   onAddBook: (book: Book) => void;
   onDeleteBook: (id: string) => void;
   onOpenDictionary: () => void;
+  onOpenStudyNotes: () => void;
 }
 
-export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onOpenDictionary }) => {
+export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onOpenDictionary, onOpenStudyNotes }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'paste' | 'pdf'>('paste');
   const [newBookTitle, setNewBookTitle] = useState('');
@@ -87,7 +88,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   const getModeLabel = (mode: BookMode) => {
     switch (mode) {
       case 'language': return 'Dil Öğrenme';
-      case 'study': return 'Ders Tekrar';
+      case 'study': return 'Ders Çalışma';
       default: return 'Normal';
     }
   };
@@ -122,6 +123,13 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
           >
             <IconDictionary />
             <span className="hidden sm:inline">Sözlük</span>
+          </button>
+          <button
+            onClick={onOpenStudyNotes}
+            className="flex items-center gap-2 bg-white border border-stone-300 text-stone-600 px-4 py-2.5 rounded-lg hover:bg-stone-50 transition-all shadow-sm"
+          >
+            <IconNotes />
+            <span className="hidden sm:inline">Ders Notları</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -246,9 +254,9 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                     >
                       <div className="flex items-center gap-2 mb-1 text-blue-700">
                         <IconStudy />
-                        <span className="font-semibold text-sm">Ders Tekrar</span>
+                        <span className="font-semibold text-sm">Ders Çalışma</span>
                       </div>
-                      <p className="text-xs text-stone-500">Önemli yerlerin altını renkli çizin.</p>
+                      <p className="text-xs text-stone-500">Altını çizin, gruplara ayırın, ders notları oluşturun.</p>
                     </button>
                  </div>
               </div>
@@ -268,29 +276,11 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                 <div>
                    <label className="block text-sm font-medium text-stone-600 mb-1">İçerik</label>
                    <textarea 
-                    className="w-full p-3 rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-stone-500 h-48 font-serif text-stone-700 leading-relaxed resize-none mb-4"
+                    className="w-full p-3 rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-stone-500 h-48 font-serif text-stone-700 leading-relaxed resize-none"
                     placeholder="İçeriği buraya yapıştırın..."
                     value={newBookContent}
                     onChange={(e) => setNewBookContent(e.target.value)}
                    ></textarea>
-                   
-                   <div className="flex items-center p-3 bg-stone-100 rounded-lg border border-stone-200">
-                      <div className="p-2 bg-white rounded-md text-stone-500 mr-3">
-                        <IconRepeat />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-ink mb-0.5">Ezber Modu (Tekrar Sayısı)</label>
-                        <p className="text-xs text-stone-500">Metnin kaç kez arka arkaya yazılacağını belirleyin.</p>
-                      </div>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="5000"
-                        value={repeatCount}
-                        onChange={(e) => setRepeatCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-24 p-2 rounded-lg border border-stone-300 bg-white text-center font-bold text-lg text-stone-800 focus:outline-none focus:border-stone-500 shadow-sm"
-                      />
-                   </div>
                 </div>
               ) : (
                 <div className="h-48 border-2 border-dashed border-stone-300 rounded-xl flex flex-col items-center justify-center bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer relative" onClick={() => !processing.isProcessing && fileInputRef.current?.click()}>
@@ -333,7 +323,28 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
               )}
             </div>
 
-            <div className="p-6 border-t border-stone-200 bg-white flex justify-end gap-3">
+            {/* Ezber Modu — always visible footer section */}
+            <div className="px-6 py-3 border-t border-stone-200 bg-stone-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-md text-stone-500 border border-stone-200">
+                  <IconRepeat />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-medium text-ink">Ezber Modu (Tekrar Sayısı)</label>
+                  <p className="text-xs text-stone-500">Metnin kaç kez arka arkaya yazılacağını belirleyin.</p>
+                </div>
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="5000"
+                  value={repeatCount}
+                  onChange={(e) => setRepeatCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-20 p-2 rounded-lg border border-stone-300 bg-white text-center font-bold text-lg text-stone-800 focus:outline-none focus:border-stone-500 shadow-sm"
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-stone-200 bg-white flex justify-end gap-3">
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="px-5 py-2.5 rounded-lg text-stone-500 hover:bg-stone-100 transition-colors"
