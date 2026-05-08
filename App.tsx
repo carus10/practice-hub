@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Library } from './components/Library';
 import { Reader } from './components/Reader';
 import { Dictionary } from './components/Dictionary';
@@ -8,56 +8,61 @@ const STORAGE_KEY_BOOKS = 'murekkep_books';
 const STORAGE_KEY_DICT = 'murekkep_dictionary';
 const STORAGE_KEY_FOLDERS = 'murekkep_folders';
 
+// ─── SAFE localStorage helpers ───────────────────────────────────
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw !== null && raw !== undefined) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as T;
+    }
+  } catch (e) {
+    console.error(`[PratikHub] localStorage parse error for "${key}":`, e);
+  }
+  return fallback;
+}
+
+function saveToStorage(key: string, data: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.error(`[PratikHub] localStorage write error for "${key}":`, e);
+  }
+}
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.LIBRARY);
-  const [books, setBooks] = useState<Book[]>([]);
-  const [dictionary, setDictionary] = useState<DictionaryItem[]>([]);
-  const [folders, setFolders] = useState<DictionaryFolder[]>([]);
+
+  // ─── LAZY INITIALIZATION: data is loaded SYNCHRONOUSLY from localStorage
+  //     BEFORE the first render, so save-effects can never wipe empty state. ──
+  const [books, setBooks] = useState<Book[]>(() => loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, []));
+  const [dictionary, setDictionary] = useState<DictionaryItem[]>(() => loadFromStorage<DictionaryItem[]>(STORAGE_KEY_DICT, []));
+  const [folders, setFolders] = useState<DictionaryFolder[]>(() => loadFromStorage<DictionaryFolder[]>(STORAGE_KEY_FOLDERS, []));
   const [activeBook, setActiveBook] = useState<Book | null>(null);
 
-  // Load from local storage on mount
+  // ─── MOUNT GUARD: prevent save-effects from firing on the very first render ──
+  const isInitialized = useRef(false);
   useEffect(() => {
-    const storedBooks = localStorage.getItem(STORAGE_KEY_BOOKS);
-    if (storedBooks) {
-      try {
-        setBooks(JSON.parse(storedBooks));
-      } catch (e) {
-        console.error("Failed to parse books", e);
-      }
-    }
-
-    const storedDict = localStorage.getItem(STORAGE_KEY_DICT);
-    if (storedDict) {
-        try {
-            setDictionary(JSON.parse(storedDict));
-        } catch (e) {
-            console.error("Failed to parse dictionary", e);
-        }
-    }
-
-    const storedFolders = localStorage.getItem(STORAGE_KEY_FOLDERS);
-    if (storedFolders) {
-        try {
-            setFolders(JSON.parse(storedFolders));
-        } catch (e) {
-            console.error("Failed to parse folders", e);
-        }
-    }
+    // Mark as initialized AFTER the first render cycle completes
+    isInitialized.current = true;
   }, []);
 
-  // Save to local storage whenever books change
+  // ─── SAFE SAVE EFFECTS ────────────────────────────────────────
+  // These will only write to localStorage AFTER the component has fully
+  // initialized, preventing the "empty array overwrite" race condition.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(books));
+    if (!isInitialized.current) return;
+    saveToStorage(STORAGE_KEY_BOOKS, books);
   }, [books]);
 
-  // Save Dictionary
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DICT, JSON.stringify(dictionary));
+    if (!isInitialized.current) return;
+    saveToStorage(STORAGE_KEY_DICT, dictionary);
   }, [dictionary]);
 
-  // Save Folders
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_FOLDERS, JSON.stringify(folders));
+    if (!isInitialized.current) return;
+    saveToStorage(STORAGE_KEY_FOLDERS, folders);
   }, [folders]);
 
   const handleAddBook = (book: Book) => {
