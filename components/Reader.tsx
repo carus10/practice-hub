@@ -11,11 +11,12 @@ interface ReaderProps {
   studyGroups: StudyGroup[];
   onCreateStudyGroup: (bookId: string, name: string) => string;
   onAddToStudyGroup: (groupId: string, text: string) => void;
+  dictionary: DictionaryItem[];
 }
 
 export const Reader: React.FC<ReaderProps> = ({ 
   book, onBack, onUpdateProgress, onAddHighlight, onAddToDictionary,
-  studyGroups, onCreateStudyGroup, onAddToStudyGroup
+  studyGroups, onCreateStudyGroup, onAddToStudyGroup, dictionary
 }) => {
   const [currentIndex, setCurrentIndex] = useState(book.progressIndex);
   const [pageStart, setPageStart] = useState(0);
@@ -29,6 +30,12 @@ export const Reader: React.FC<ReaderProps> = ({
   const [dictDefinition, setDictDefinition] = useState('');
   const [dictExample, setDictExample] = useState('');
   const [dictNotes, setDictNotes] = useState('');
+
+  // Word Info State
+  const [showWordInfoModal, setShowWordInfoModal] = useState(false);
+  const [isFetchingWord, setIsFetchingWord] = useState(false);
+  const [wordInfo, setWordInfo] = useState<{word: string, definition: string, example: string, isLocal: boolean} | null>(null);
+  const [wordInfoError, setWordInfoError] = useState<string | null>(null);
 
   // Study Group Modal State
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -112,6 +119,103 @@ export const Reader: React.FC<ReaderProps> = ({
   };
 
   // ─── DICTIONARY ──
+  const handleViewMeaning = async () => {
+      const word = selectedText.toLowerCase().replace(/[^\w\s\ğ\ü\ş\i\ö\ç\I\İ\Ğ\Ü\Ş\Ö\Ç-]/gi, '').trim();
+      if (!word) return;
+
+      setShowWordInfoModal(true);
+      setIsFetchingWord(true);
+      setWordInfoError(null);
+      setWordInfo(null);
+
+      // Check local dictionary first
+      const localItem = dictionary.find(item => item.word.toLowerCase() === word);
+      if (localItem) {
+          setWordInfo({
+              word: localItem.word,
+              definition: localItem.definition,
+              example: localItem.exampleSentences?.[0] || localItem.exampleSentence || '',
+              isLocal: true
+          });
+          setIsFetchingWord(false);
+          return;
+      }
+
+      // Fetch from APIs
+      try {
+          let example = '';
+          let definition = '';
+
+          // 1. Fetch Example Sentence from dictionaryapi.dev
+          try {
+              const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+              if (dictRes.ok) {
+                  const data = await dictRes.json();
+                  // Try to find any definition that has an example
+                  for (const meaning of data[0]?.meanings || []) {
+                      for (const def of meaning.definitions || []) {
+                          if (def.example) {
+                              example = def.example;
+                              break;
+                          }
+                      }
+                      if (example) break;
+                  }
+                  // Fallback to english definition if translation fails later
+                  if (!example && data[0]?.meanings?.[0]?.definitions?.[0]?.definition) {
+                      // Optionally keep english definition if no example but we want to show something
+                  }
+              }
+          } catch (e) {
+              console.error("Dictionary API error:", e);
+          }
+
+          // 2. Fetch Turkish Translation from MyMemory API
+          try {
+              const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|tr`);
+              if (transRes.ok) {
+                  const transData = await transRes.json();
+                  if (transData.responseData?.translatedText) {
+                      definition = transData.responseData.translatedText;
+                  }
+              }
+          } catch (e) {
+              console.error("Translation API error:", e);
+          }
+
+          if (!definition && !example) {
+              throw new Error("Kelimenin anlamı veya örnek cümlesi bulunamadı.");
+          }
+
+          setWordInfo({
+              word: word,
+              definition: definition || 'Türkçe çeviri bulunamadı',
+              example: example || '',
+              isLocal: false
+          });
+
+      } catch (err: any) {
+          setWordInfoError(err.message || "Bir hata oluştu.");
+      } finally {
+          setIsFetchingWord(false);
+      }
+  };
+
+  const saveWordInfoToDictionary = () => {
+      if (wordInfo) {
+          onAddToDictionary(wordInfo.word, wordInfo.definition, wordInfo.example, '');
+          closeWordInfoModal();
+      }
+  };
+
+  const closeWordInfoModal = () => {
+      setShowWordInfoModal(false);
+      setWordInfo(null);
+      setWordInfoError(null);
+      setSelectionRange(null);
+      window.getSelection()?.removeAllRanges();
+  };
+
   const initAddToDictionary = () => {
     setShowDictModal(true);
   };
@@ -175,7 +279,7 @@ export const Reader: React.FC<ReaderProps> = ({
 
   // Keyboard Handling
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (showDictModal || showGroupModal) return;
+    if (showDictModal || showGroupModal || showWordInfoModal) return;
 
     if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) {
       e.preventDefault();
@@ -202,7 +306,7 @@ export const Reader: React.FC<ReaderProps> = ({
          onUpdateProgress(book.id, newIndex);
       }
     }
-  }, [currentIndex, book.content, book.id, onUpdateProgress, showDictModal, showGroupModal]);
+  }, [currentIndex, book.content, book.id, onUpdateProgress, showDictModal, showGroupModal, showWordInfoModal]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -316,13 +420,22 @@ export const Reader: React.FC<ReaderProps> = ({
                 </>
             )}
             {book.mode === 'language' && (
-                 <button 
-                    onClick={initAddToDictionary}
-                    className="flex items-center gap-2 px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-sm font-medium"
-                 >
-                    <IconDictionary />
-                    Sözlüğe Ekle
-                 </button>
+                 <>
+                     <button 
+                        onClick={handleViewMeaning}
+                        className="flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded hover:bg-emerald-200 text-sm font-medium"
+                     >
+                        <IconDictionary />
+                        Çevir / Anlamı
+                     </button>
+                     <div className="w-px bg-stone-200 mx-1"></div>
+                     <button 
+                        onClick={initAddToDictionary}
+                        className="flex items-center gap-2 px-3 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-sm font-medium"
+                     >
+                        Sözlüğe Ekle
+                     </button>
+                 </>
             )}
         </div>
       )}
@@ -501,6 +614,71 @@ export const Reader: React.FC<ReaderProps> = ({
                           <button onClick={saveToDictionary} className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg shadow-sm font-medium transition-colors">Kaydet</button>
                       </div>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* ─── Word Info Modal (Dictionary API) ─── */}
+      {showWordInfoModal && (
+          <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200 flex justify-between items-center">
+                      <div>
+                         <h3 className="text-xl font-serif text-ink">Kelime Çevirisi</h3>
+                         {wordInfo?.isLocal && <span className="text-xs text-emerald-600 font-medium">Sözlüğünüzden (Çevrimdışı)</span>}
+                         {!wordInfo?.isLocal && wordInfo && <span className="text-xs text-blue-600 font-medium">dictionaryapi.dev (Çevrimiçi)</span>}
+                      </div>
+                      <button onClick={closeWordInfoModal} className="text-stone-400 hover:text-stone-600 p-1">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                  </div>
+
+                  <div className="p-6">
+                      {isFetchingWord ? (
+                          <div className="flex flex-col items-center justify-center py-8">
+                              <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                              <p className="text-stone-500 text-sm">Kelime aranıyor...</p>
+                          </div>
+                      ) : wordInfoError ? (
+                          <div className="text-center py-8 bg-red-50 rounded-xl border border-red-100">
+                              <p className="text-red-600 font-medium mb-2">{wordInfoError}</p>
+                              <p className="text-sm text-red-400 mb-4">API sadece İngilizce kelimeleri destekler.</p>
+                              <button onClick={initAddToDictionary} className="px-4 py-2 bg-white text-emerald-600 border border-emerald-200 rounded-lg text-sm hover:bg-emerald-50">
+                                 Manuel Olarak Sözlüğe Ekle
+                              </button>
+                          </div>
+                      ) : wordInfo ? (
+                          <div className="space-y-4">
+                              <div>
+                                  <h4 className="text-2xl font-serif text-ink font-bold">{wordInfo.word}</h4>
+                              </div>
+                              <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
+                                  <span className="text-xs text-stone-400 uppercase font-bold tracking-wider block mb-1">Anlam</span>
+                                  <p className="text-stone-800 text-sm">{wordInfo.definition}</p>
+                              </div>
+                              {wordInfo.example && (
+                                  <div className="bg-stone-50 p-4 rounded-xl border border-stone-100">
+                                      <span className="text-xs text-stone-400 uppercase font-bold tracking-wider block mb-1">Örnek Cümle</span>
+                                      <p className="text-stone-600 italic text-sm">"{wordInfo.example}"</p>
+                                  </div>
+                              )}
+                          </div>
+                      ) : null}
+                  </div>
+
+                  {!isFetchingWord && !wordInfoError && wordInfo && (
+                      <div className="px-6 py-4 border-t border-stone-100 bg-stone-50 flex justify-end gap-3">
+                          <button onClick={closeWordInfoModal} className="px-4 py-2 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors text-sm">
+                              Kapat
+                          </button>
+                          {!wordInfo.isLocal && (
+                              <button onClick={saveWordInfoToDictionary} className="px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium transition-colors text-sm flex items-center gap-2">
+                                  <IconDictionary />
+                                  Sözlüğe Kaydet
+                              </button>
+                          )}
+                      </div>
+                  )}
               </div>
           </div>
       )}

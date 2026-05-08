@@ -24,8 +24,12 @@ export const Dictionary: React.FC<DictionaryProps> = ({
   
   // Edit state fields
   const [editDefinition, setEditDefinition] = useState('');
-  const [editExample, setEditExample] = useState('');
+  const [editExamples, setEditExamples] = useState<string[]>([]);
   const [editNotes, setEditNotes] = useState('');
+
+  // Quick Add Example state
+  const [quickAddText, setQuickAddText] = useState('');
+  const [quickAddItemId, setQuickAddItemId] = useState<string | null>(null);
 
   // Item to delete modal
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
@@ -78,18 +82,35 @@ export const Dictionary: React.FC<DictionaryProps> = ({
     setEditingItemId(item.id);
     setExpandedItemId(item.id);
     setEditDefinition(item.definition || '');
-    setEditExample(item.exampleSentence || '');
+    setEditExamples([...(item.exampleSentences || (item.exampleSentence ? [item.exampleSentence] : []))]);
     setEditNotes(item.notes || '');
+    setQuickAddItemId(null);
   };
 
   const saveEdit = (item: DictionaryItem) => {
+    const validExamples = editExamples.filter(e => e.trim() !== '');
     onUpdateItem({
       ...item,
       definition: editDefinition,
-      exampleSentence: editExample,
+      exampleSentence: validExamples[0] || '',
+      exampleSentences: validExamples,
       notes: editNotes,
     });
     setEditingItemId(null);
+  };
+
+  const handleQuickAdd = (item: DictionaryItem) => {
+    if (!quickAddText.trim()) return;
+    const currentExamples = item.exampleSentences || (item.exampleSentence ? [item.exampleSentence] : []);
+    const newExamples = [...currentExamples, quickAddText.trim()];
+    
+    onUpdateItem({
+        ...item,
+        exampleSentence: newExamples[0] || '',
+        exampleSentences: newExamples
+    });
+    setQuickAddText('');
+    setQuickAddItemId(null);
   };
 
   const cancelEdit = () => {
@@ -286,13 +307,40 @@ export const Dictionary: React.FC<DictionaryProps> = ({
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Örnek Cümle</label>
-                                                                <textarea 
-                                                                    className="w-full p-2.5 text-sm border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-500 bg-white text-stone-900 resize-none h-16"
-                                                                    value={editExample}
-                                                                    onChange={(e) => setEditExample(e.target.value)}
-                                                                    placeholder="Bir örnek cümle yazın..."
-                                                                />
+                                                                <div className="flex justify-between items-end mb-1">
+                                                                    <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider">Örnek Cümleler</label>
+                                                                    <button 
+                                                                        onClick={() => setEditExamples([...editExamples, ''])}
+                                                                        className="text-xs text-emerald-600 font-medium hover:text-emerald-700"
+                                                                    >
+                                                                        + Yeni Ekle
+                                                                    </button>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    {editExamples.map((ex, idx) => (
+                                                                        <div key={idx} className="flex gap-2">
+                                                                            <textarea 
+                                                                                className="flex-1 p-2.5 text-sm border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-500 bg-white text-stone-900 resize-none h-12"
+                                                                                value={ex}
+                                                                                onChange={(e) => {
+                                                                                    const newExs = [...editExamples];
+                                                                                    newExs[idx] = e.target.value;
+                                                                                    setEditExamples(newExs);
+                                                                                }}
+                                                                                placeholder="Bir örnek cümle yazın..."
+                                                                            />
+                                                                            <button 
+                                                                                onClick={() => setEditExamples(editExamples.filter((_, i) => i !== idx))}
+                                                                                className="p-2 text-stone-400 hover:text-red-500 rounded-lg shrink-0"
+                                                                            >
+                                                                                <IconTrash />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                    {editExamples.length === 0 && (
+                                                                        <p className="text-sm text-stone-400 italic">Örnek cümle yok. Eklemek için "+ Yeni Ekle"ye tıklayın.</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <div>
                                                                 <label className="block text-xs text-stone-500 uppercase font-bold tracking-wider mb-1">Açıklama / Not</label>
@@ -330,12 +378,58 @@ export const Dictionary: React.FC<DictionaryProps> = ({
                                                                 </p>
                                                             </div>
                                                             
-                                                            {/* Örnek Cümle */}
+                                                            {/* Örnek Cümleler */}
                                                             <div>
-                                                                <span className="text-xs text-stone-400 uppercase font-bold tracking-wider">Örnek Cümle</span>
-                                                                <p className={`text-sm mt-0.5 ${item.exampleSentence ? 'text-stone-700 italic' : 'text-stone-400 italic'}`}>
-                                                                    {item.exampleSentence ? `"${item.exampleSentence}"` : 'Henüz örnek cümle eklenmedi'}
-                                                                </p>
+                                                                <span className="text-xs text-stone-400 uppercase font-bold tracking-wider mb-2 block">Örnek Cümleler</span>
+                                                                {item.exampleSentences && item.exampleSentences.length > 0 ? (
+                                                                    <div className="space-y-2 mt-1">
+                                                                        {item.exampleSentences.map((ex, i) => (
+                                                                            <p key={i} className="text-sm text-stone-700 italic border-l-2 border-emerald-200 pl-3">
+                                                                                "{ex}"
+                                                                            </p>
+                                                                        ))}
+                                                                    </div>
+                                                                ) : item.exampleSentence ? (
+                                                                     <div className="space-y-2 mt-1">
+                                                                        <p className="text-sm text-stone-700 italic border-l-2 border-emerald-200 pl-3">
+                                                                            "{item.exampleSentence}"
+                                                                        </p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-sm text-stone-400 italic">
+                                                                        Henüz örnek cümle eklenmedi
+                                                                    </p>
+                                                                )}
+                                                                
+                                                                {/* Quick Add Inline */}
+                                                                <div className="mt-3">
+                                                                    {quickAddItemId === item.id ? (
+                                                                        <div className="flex gap-2 items-start mt-2">
+                                                                            <textarea
+                                                                                className="flex-1 p-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:border-emerald-500 resize-none h-12 bg-white"
+                                                                                placeholder="Yeni örnek cümle yazın..."
+                                                                                value={quickAddText}
+                                                                                onChange={(e) => setQuickAddText(e.target.value)}
+                                                                                autoFocus
+                                                                            />
+                                                                            <div className="flex flex-col gap-1 shrink-0">
+                                                                                <button onClick={() => handleQuickAdd(item)} className="p-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded">
+                                                                                    <IconCheck />
+                                                                                </button>
+                                                                                <button onClick={() => { setQuickAddItemId(null); setQuickAddText(''); }} className="p-1 bg-stone-100 text-stone-500 hover:bg-stone-200 rounded">
+                                                                                    <IconX />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <button 
+                                                                            onClick={() => { setQuickAddItemId(item.id); setQuickAddText(''); }}
+                                                                            className="text-xs text-emerald-600 font-medium hover:text-emerald-700 inline-flex items-center gap-1 mt-1"
+                                                                        >
+                                                                            + Yeni Örnek Cümle Ekle
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
 
                                                             {/* Açıklama (sadece varsa göster) */}

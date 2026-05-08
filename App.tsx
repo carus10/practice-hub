@@ -43,6 +43,7 @@ function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
   return items.map(item => ({
     ...item,
     exampleSentence: item.exampleSentence || '',
+    exampleSentences: item.exampleSentences || (item.exampleSentence ? [item.exampleSentence] : []),
     notes: item.notes || '',
   }));
 }
@@ -169,7 +170,8 @@ const App: React.FC = () => {
           id: crypto.randomUUID(),
           word,
           definition,
-          exampleSentence,
+          exampleSentence, // legacy field
+          exampleSentences: exampleSentence ? [exampleSentence] : [],
           notes,
           sourceBookId: activeBook?.id,
           createdAt: Date.now()
@@ -257,6 +259,7 @@ const App: React.FC = () => {
         activeBook && (
           <Reader 
             book={activeBook} 
+            dictionary={dictionary}
             onBack={() => setView(AppView.LIBRARY)} 
             onUpdateProgress={handleUpdateProgress}
             onAddHighlight={handleAddHighlight}

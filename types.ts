@@ -20,7 +20,8 @@ export interface DictionaryItem {
   id: string;
   word: string;
   definition: string;
-  exampleSentence: string;
+  exampleSentence?: string; // Kept for backwards compatibility, but we use exampleSentences now
+  exampleSentences?: string[];
   notes: string;
   sourceBookId?: string;
   createdAt: number;
