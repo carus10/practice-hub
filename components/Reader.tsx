@@ -558,9 +558,9 @@ export const Reader: React.FC<ReaderProps> = ({
       {showDictModal && (
           <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200">
+                  <div className="modal-header-emerald bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200">
                       <h3 className="text-xl font-serif text-ink">Sözlüğe Ekle</h3>
-                      <p className="text-stone-500 text-sm mt-1">Detayları şimdi ekleyebilir veya atlayarak sonra düzenleyebilirsiniz.</p>
+                      <p className="modal-header-label text-stone-500 text-sm mt-1">Detayları şimdi ekleyebilir veya atlayarak sonra düzenleyebilirsiniz.</p>
                   </div>
 
                   <div className="p-6 space-y-5">
@@ -622,13 +622,13 @@ export const Reader: React.FC<ReaderProps> = ({
       {showWordInfoModal && (
           <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in duration-200">
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200 flex justify-between items-center">
+              <div className="modal-header-emerald bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-5 border-b border-stone-200 flex justify-between items-center">
                       <div>
                          <h3 className="text-xl font-serif text-ink">Kelime Çevirisi</h3>
-                         {wordInfo?.isLocal && <span className="text-xs text-emerald-600 font-medium">Sözlüğünüzden (Çevrimdışı)</span>}
-                         {!wordInfo?.isLocal && wordInfo && <span className="text-xs text-blue-600 font-medium">dictionaryapi.dev (Çevrimiçi)</span>}
+                         {wordInfo?.isLocal && <span className="modal-header-label text-xs text-emerald-600 font-medium">Sözlüğünüzden (Çevrimdışı)</span>}
+                         {!wordInfo?.isLocal && wordInfo && <span className="modal-header-label text-xs text-blue-600 font-medium">dictionaryapi.dev (Çevrimiçi)</span>}
                       </div>
-                      <button onClick={closeWordInfoModal} className="text-stone-400 hover:text-stone-600 p-1">
+                      <button onClick={closeWordInfoModal} className="modal-header-close text-stone-400 hover:text-stone-600 p-1">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
                   </div>
