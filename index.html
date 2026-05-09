@@ -84,7 +84,11 @@
       }
       .dark input:focus, .dark textarea:focus { border-color: #555 !important; }
       .dark ::placeholder { color: #555 !important; }
-      .dark ::selection { background-color: rgba(224,124,58,0.35); color: #fff; }
+      .dark *::selection,
+      .dark *::-moz-selection {
+        background-color: rgba(224,124,58,0.40) !important;
+        color: #fff !important;
+      }
       .dark input[type="range"] { accent-color: #e8e6e3; }
       .dark .bg-emerald-50 { background-color: rgba(16,185,129,0.1); }
       .dark .bg-blue-50 { background-color: rgba(59,130,246,0.1); }
