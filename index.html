@@ -84,8 +84,11 @@
       }
       .dark input:focus, .dark textarea:focus { border-color: #555 !important; }
       .dark ::placeholder { color: #555 !important; }
-      .dark *::selection,
-      .dark *::-moz-selection {
+      .dark ::selection {
+        background-color: rgba(224,124,58,0.40) !important;
+        color: #fff !important;
+      }
+      .dark ::-moz-selection {
         background-color: rgba(224,124,58,0.40) !important;
         color: #fff !important;
       }

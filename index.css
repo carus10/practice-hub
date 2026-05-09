@@ -1,2 +1,13 @@
 /* Pratik Hub — Global Styles */
-/* Note: Core styles are defined inline in index.html via Tailwind CDN config */
+/* Loaded LAST to guarantee override priority over Tailwind CDN */
+
+/* Dark mode text selection — accent orange */
+.dark ::selection {
+  background-color: rgba(224, 124, 58, 0.40) !important;
+  color: #fff !important;
+}
+
+.dark ::-moz-selection {
+  background-color: rgba(224, 124, 58, 0.40) !important;
+  color: #fff !important;
+}
