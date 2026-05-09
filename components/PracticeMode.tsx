@@ -352,7 +352,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                         className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-emerald-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(16,185,129,0.1)] hover:-translate-y-2 relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-emerald-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
-                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-500 rotate-[-2deg] group-hover:rotate-0">🇹🇷</div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-500 rotate-[-2deg] group-hover:rotate-0">📖</div>
                         <h3 className="font-serif text-2xl text-ink font-medium mb-3">Kelime → Anlam</h3>
                         <p className="text-sm text-stone-500 leading-relaxed font-medium">İngilizce kelimeyi görün ve Türkçe anlamını tahmin etmeye çalışın.</p>
                     </button>
@@ -363,7 +363,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                         className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-blue-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(59,130,246,0.1)] hover:-translate-y-2 relative overflow-hidden delay-75"
                     >
                         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-500 rotate-2 group-hover:rotate-0">🇬🇧</div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform duration-500 rotate-2 group-hover:rotate-0">✏️</div>
                         <h3 className="font-serif text-2xl text-ink font-medium mb-3">Anlam → Kelime</h3>
                         <p className="text-sm text-stone-500 leading-relaxed font-medium">Türkçe anlamı verilen kelimenin İngilizcesini hatırlayın ve yazın.</p>
                     </button>
