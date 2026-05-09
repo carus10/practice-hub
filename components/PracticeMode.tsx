@@ -29,11 +29,11 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
     const [listenCount, setListenCount] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Initial word selection algorithm
+    // ─── Kategorik Kelime Seçim Algoritması ───
     const startPractice = (selectedMode: PracticeType) => {
         let practiceItems = [...items];
-        
-        // Filter for mode 3 (needs examples)
+
+        // FILL_BLANK için örnek cümle filtresi
         if (selectedMode === 'FILL_BLANK') {
             practiceItems = practiceItems.filter(i => (i.exampleSentences && i.exampleSentences.length > 0) || i.exampleSentence);
         }
@@ -43,29 +43,70 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
             return;
         }
 
-        // Weight algorithm: Score (0-10)
-        practiceItems.sort((a, b) => {
-            const scoreA = a.difficultyScore || 0;
-            const scoreB = b.difficultyScore || 0;
-            
-            // Zaman faktörü: Pratik yapılmayan her gün için ağırlık artar. Hiç yapılmadıysa 10 günlük avantaj.
-            const daysSinceA = a.lastPracticedAt ? (Date.now() - a.lastPracticedAt) / 86400000 : 10;
-            const daysSinceB = b.lastPracticedAt ? (Date.now() - b.lastPracticedAt) / 86400000 : 10;
+        // Kategori fonksiyonu: zaman bazlı ağırlık (capped 7 gün), küçük gürültü
+        const priorityScore = (item: typeof practiceItems[0]) => {
+            const daysSince = item.lastPracticedAt
+                ? Math.min((Date.now() - item.lastPracticedAt) / 86400000, 7)
+                : 0;
+            return daysSince * 1.5 + Math.random() * 2;
+        };
 
-            const weightA = scoreA * 2 + Math.random() * 5 + daysSinceA;
-            const weightB = scoreB * 2 + Math.random() * 5 + daysSinceB;
-            
-            return weightB - weightA;
-        });
+        const sortedByPriority = (arr: typeof practiceItems) =>
+            [...arr].sort((a, b) => priorityScore(b) - priorityScore(a));
 
-        // Take top 20 words for a session, then shuffle them
-        const sessionWords = practiceItems.slice(0, 20).sort(() => Math.random() - 0.5);
+        // Kategorilere ayır
+        const newWords    = practiceItems.filter(i => !i.lastPracticedAt);
+        const hardWords   = practiceItems.filter(i => i.lastPracticedAt && (i.difficultyScore || 0) >= 6);
+        const mediumWords = practiceItems.filter(i => i.lastPracticedAt && (i.difficultyScore || 0) >= 2 && (i.difficultyScore || 0) <= 5);
+        const easyWords   = practiceItems.filter(i => i.lastPracticedAt && (i.difficultyScore || 0) <= 1);
 
-        setQueue(sessionWords);
+        // Hedef slot sayıları
+        const TARGET = { new: 5, hard: 8, medium: 5, easy: 2 };
+        const SESSION_SIZE = 20;
+
+        const pick = (pool: typeof practiceItems, count: number) =>
+            sortedByPriority(pool).slice(0, count);
+
+        let session: typeof practiceItems = [];
+        let remaining = SESSION_SIZE;
+
+        // Yeni kelimeler — garantili 5 slot
+        const pickedNew = pick(newWords, Math.min(TARGET.new, newWords.length));
+        session.push(...pickedNew);
+        remaining -= pickedNew.length;
+
+        // Zor kelimeler — 8 slot (eksik varsa hard'a ekstra verilir)
+        const hardSlots = Math.min(TARGET.hard + Math.max(0, TARGET.new - pickedNew.length), hardWords.length);
+        const pickedHard = pick(hardWords, hardSlots);
+        session.push(...pickedHard);
+        remaining -= pickedHard.length;
+
+        // Orta kelimeler
+        const pickedMedium = pick(mediumWords, Math.min(TARGET.medium, mediumWords.length, remaining));
+        session.push(...pickedMedium);
+        remaining -= pickedMedium.length;
+
+        // Kolay kelimeler
+        const pickedEasy = pick(easyWords, Math.min(TARGET.easy, easyWords.length, remaining));
+        session.push(...pickedEasy);
+        remaining -= pickedEasy.length;
+
+        // Hala slot kaldıysa tüm havuzdan doldur (küçük sözlükler için)
+        if (remaining > 0) {
+            const used = new Set(session.map(i => i.id));
+            const extras = pick(practiceItems.filter(i => !used.has(i.id)), remaining);
+            session.push(...extras);
+        }
+
+        // Karıştır ve başlat
+        session = session.sort(() => Math.random() - 0.5);
+
+        setQueue(session);
         setCurrentIndex(0);
         setMode(selectedMode);
         resetTurn();
     };
+
 
     const resetTurn = () => {
         setInputValue('');
@@ -250,8 +291,16 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
             setCurrentIndex(prev => prev + 1);
             resetTurn();
         } else {
-            setMode(null); // Session end
+            setMode(null);
         }
+    };
+
+    // ─── Bilmiyorum: +3 puan, direk geç ───
+    const handleSkip = () => {
+        if (!currentItem) return;
+        const newScore = Math.min(10, (currentItem.difficultyScore || 0) + 3);
+        onUpdateItem({ ...currentItem, difficultyScore: newScore, lastPracticedAt: Date.now() });
+        nextWord();
     };
 
     // ─── Pronunciation helpers ───
@@ -455,15 +504,23 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                         />
                     </div>
 
-                    {/* Check button */}
+                    {/* Check button + Skip */}
                     {feedback === 'IDLE' && (
-                        <button
-                            onClick={checkAnswer}
-                            disabled={!inputValue.trim()}
-                            className="px-8 py-3 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-700 disabled:opacity-40 transition-all shadow-md hover:shadow-lg"
-                        >
-                            Kontrol Et
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={checkAnswer}
+                                disabled={!inputValue.trim()}
+                                className="px-8 py-3 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-700 disabled:opacity-40 transition-all shadow-md hover:shadow-lg"
+                            >
+                                Kontrol Et
+                            </button>
+                            <button
+                                onClick={handleSkip}
+                                className="px-5 py-3 text-sm font-medium text-stone-400 border border-stone-200 rounded-2xl hover:bg-stone-100 hover:text-stone-600 transition-all"
+                            >
+                                Bilmiyorum →
+                            </button>
+                        </div>
                     )}
 
                     {/* Feedback */}
@@ -564,6 +621,18 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                         autoComplete="off"
                     />
                 </div>
+
+                {/* Submit + Skip row */}
+                {feedback === 'IDLE' && (
+                    <div className="flex items-center gap-3 mt-2">
+                        <button
+                            onClick={handleSkip}
+                            className="px-5 py-3 text-sm font-medium text-stone-400 border border-stone-200 rounded-2xl hover:bg-stone-100 hover:text-stone-600 transition-all"
+                        >
+                            Bilmiyorum →
+                        </button>
+                    </div>
+                )}
 
                 {/* Feedback Area */}
                 <div className="mt-6 min-h-[12rem] flex flex-col items-center justify-start w-full">
