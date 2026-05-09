@@ -365,9 +365,9 @@ export const Reader: React.FC<ReaderProps> = ({
             if (isTyped) {
               className += "text-ink opacity-100 ";
             } else if (isCurrent) {
-              className += "text-stone-500 dark:text-stone-300 bg-stone-200 dark:bg-[#3a3a3a] rounded-sm opacity-100 border-b-2 border-accent ";
+              className += "reader-char-current text-stone-500 bg-stone-200 rounded-sm opacity-100 border-b-2 border-accent ";
             } else {
-              className += "text-stone-400 dark:text-stone-500 opacity-100 ";
+              className += "reader-char-untyped text-stone-400 opacity-100 ";
             }
             
             if (highlight) {
@@ -393,7 +393,7 @@ export const Reader: React.FC<ReaderProps> = ({
       {/* ─── Floating Toolbar for Selection ─── */}
       {selectionRange && (book.mode === 'study' || book.mode === 'language') && (
         <div 
-            className="fixed bg-white dark:bg-[#2a2a2a] shadow-xl dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] rounded-xl p-2.5 border border-stone-200 dark:border-stone-600 z-50 flex gap-2 animate-in fade-in zoom-in duration-200 backdrop-blur-md"
+            className="reader-toolbar fixed bg-white shadow-xl rounded-xl p-2.5 border border-stone-200 z-50 flex gap-2 animate-in fade-in zoom-in duration-200"
             style={{ 
                 top: Math.max(10, selectionRange.top - 60), 
                 left: Math.max(10, selectionRange.left - (book.mode === 'study' ? 140 : 40)) 
@@ -401,14 +401,14 @@ export const Reader: React.FC<ReaderProps> = ({
         >
             {book.mode === 'study' && (
                 <>
-                    <button onClick={() => applyHighlight('green')} className="w-8 h-8 rounded-full bg-green-200 hover:bg-green-300 border border-green-400 transition-colors" title="Yeşil"></button>
-                    <button onClick={() => applyHighlight('blue')} className="w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 border border-blue-400 transition-colors" title="Mavi"></button>
-                    <button onClick={() => applyHighlight('red')} className="w-8 h-8 rounded-full bg-red-200 hover:bg-red-300 border border-red-400 transition-colors" title="Kırmızı"></button>
-                    <div className="w-px bg-stone-200 dark:bg-stone-600 mx-1"></div>
-                    <button onClick={() => applyHighlight(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 dark:bg-stone-700 hover:bg-stone-200 dark:hover:bg-stone-600 border border-stone-300 dark:border-stone-500 text-stone-600 dark:text-stone-300 transition-colors" title="Temizle">
+                    <button onClick={() => applyHighlight('green')} className="reader-hl-btn w-8 h-8 rounded-full bg-green-200 hover:bg-green-300 border border-green-400 transition-colors" title="Yeşil"></button>
+                    <button onClick={() => applyHighlight('blue')} className="reader-hl-btn w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 border border-blue-400 transition-colors" title="Mavi"></button>
+                    <button onClick={() => applyHighlight('red')} className="reader-hl-btn w-8 h-8 rounded-full bg-red-200 hover:bg-red-300 border border-red-400 transition-colors" title="Kırmızı"></button>
+                    <div className="reader-separator w-px bg-stone-200 mx-1"></div>
+                    <button onClick={() => applyHighlight(null)} className="reader-eraser-btn w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-600 transition-colors" title="Temizle">
                       <IconEraser />
                     </button>
-                    <div className="w-px bg-stone-200 dark:bg-stone-600 mx-1"></div>
+                    <div className="reader-separator w-px bg-stone-200 mx-1"></div>
                     <button 
                       onClick={initAddToGroup}
                       className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
@@ -423,12 +423,12 @@ export const Reader: React.FC<ReaderProps> = ({
                  <>
                      <button 
                         onClick={handleViewMeaning}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 rounded-lg hover:bg-emerald-200 dark:hover:bg-emerald-500/30 text-sm font-medium transition-colors"
+                        className="reader-btn-translate flex items-center gap-2 px-3 py-1.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg hover:bg-emerald-200 text-sm font-medium transition-colors"
                      >
                         <IconDictionary />
                         Çevir / Anlamı
                      </button>
-                     <div className="w-px bg-stone-200 dark:bg-stone-600 mx-1"></div>
+                     <div className="reader-separator w-px bg-stone-200 mx-1"></div>
                      <button 
                         onClick={initAddToDictionary}
                         className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors"
