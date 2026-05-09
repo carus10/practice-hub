@@ -263,6 +263,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utt);
         setListenCount(prev => prev + 1);
+        setTimeout(() => inputRef.current?.focus(), 50);
     };
 
     const revealHint = () => {
@@ -274,6 +275,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
         setRevealedIndices(prev => [...prev, pick]);
         setHintCount(prev => prev + 1);
+        setTimeout(() => inputRef.current?.focus(), 50);
     };
 
     if (!mode) {
@@ -449,6 +451,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                             readOnly={isDone}
                             spellCheck={false}
                             autoComplete="off"
+                            autoFocus
                         />
                     </div>
 
