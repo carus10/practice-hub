@@ -66,8 +66,6 @@ const App: React.FC = () => {
 
   // ─── DARK MODE ───
   const [isDark, setIsDark] = useState(() => localStorage.getItem('pratik_hub_theme') === 'dark');
-  const [curtainVisible, setCurtainVisible] = useState(false);
-  const [curtainColor, setCurtainColor] = useState('');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
@@ -75,14 +73,20 @@ const App: React.FC = () => {
 
   const toggleTheme = () => {
     const next = !isDark;
-    setCurtainColor(next ? '#111111' : '#f7f5f0');
-    setCurtainVisible(true);
-    setTimeout(() => {
+    
+    // Smooth native crossfade via View Transitions API
+    if (!document.startViewTransition) {
       setIsDark(next);
       localStorage.setItem('pratik_hub_theme', next ? 'dark' : 'light');
       document.documentElement.classList.toggle('dark', next);
-    }, 350);
-    setTimeout(() => setCurtainVisible(false), 800);
+      return;
+    }
+
+    document.startViewTransition(() => {
+      setIsDark(next);
+      localStorage.setItem('pratik_hub_theme', next ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', next);
+    });
   };
 
   // ─── LAZY INITIALIZATION with migration ──
@@ -272,13 +276,6 @@ const App: React.FC = () => {
 
   return (
     <div className="font-sans text-ink antialiased bg-paper min-h-screen selection:bg-stone-200 selection:text-ink">
-      {/* Theme Curtain */}
-      {curtainVisible && (
-        <div
-          className="fixed inset-0 z-[9999] pointer-events-none"
-          style={{ backgroundColor: curtainColor, animation: 'themeCurtain 0.8s ease-in-out forwards' }}
-        />
-      )}
       {view === AppView.WELCOME ? (
         <WelcomeScreen onEnter={() => setView(AppView.LIBRARY)} />
       ) : (

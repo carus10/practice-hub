@@ -282,18 +282,21 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
         </div>
 
         <div className="space-y-3">
-          {/* Theme Toggle */}
-          <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors duration-300 ${isDark ? 'bg-stone-800/50' : 'bg-stone-100'}`}>
-            <span className="text-sm">☀️</span>
+          {/* Theme Toggle (Liquid Glass) */}
+          <div className={`relative flex items-center justify-between px-3 py-2.5 rounded-2xl transition-colors duration-500 overflow-hidden shadow-[inset_0_1px_3px_rgba(0,0,0,0.1)] backdrop-blur-md border ${isDark ? 'bg-white/10 border-white/10' : 'bg-black/5 border-black/5'}`}>
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
+            <span className="text-sm relative z-10 opacity-70">☀️</span>
             <button
               onClick={onToggleTheme}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-500 ${isDark ? 'bg-indigo-600' : 'bg-stone-300'}`}
+              className={`relative w-14 h-7 rounded-full transition-all duration-500 shadow-inner overflow-hidden border ${isDark ? 'bg-indigo-500/30 border-indigo-400/30' : 'bg-white/40 border-white/60'}`}
+              style={{ backdropFilter: 'blur(8px)' }}
             >
-              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-500 ${isDark ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
-                style={{ transitionTimingFunction: 'cubic-bezier(0.68,-0.55,0.265,1.55)' }}
-              />
+              <div className={`absolute top-0.5 bottom-0.5 w-6 rounded-full shadow-[0_2px_5px_rgba(0,0,0,0.2)] transition-all duration-500 flex items-center justify-center border ${isDark ? 'translate-x-[26px] bg-gradient-to-br from-indigo-200 to-white border-white/50' : 'translate-x-0.5 bg-gradient-to-br from-white to-stone-100 border-white'}`}
+                style={{ transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+              >
+              </div>
             </button>
-            <span className="text-sm">🌙</span>
+            <span className="text-sm relative z-10 opacity-70">🌙</span>
           </div>
 
           <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center gap-2 bg-ink text-paper px-4 py-3.5 rounded-xl hover:bg-stone-800 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] font-medium text-sm group active:scale-95">
