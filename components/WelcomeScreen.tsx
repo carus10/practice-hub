@@ -66,14 +66,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
           {/* Animated Gradient Border */}
           <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-r from-accent/20 via-white/50 to-accent/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-sm" />
           
-          <div className="relative h-full w-full bg-white/60 backdrop-blur-2xl rounded-[2.3rem] border border-white/80 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col items-center justify-center py-12 transition-transform duration-700 group-hover:scale-[0.99]">
+          <div className="relative h-full w-full bg-white/60 dark:bg-white/5 backdrop-blur-2xl rounded-[2.3rem] border border-white/80 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col items-center justify-center py-12 transition-transform duration-700 group-hover:scale-[0.99]">
             
             {/* Top decorative line */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-[2px] bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-[2px] bg-gradient-to-r from-transparent via-accent/30 dark:via-accent/50 to-transparent" />
 
             <div className="flex flex-col items-center space-y-6 z-20 pb-16">
               {/* Badge */}
-              <div className="px-4 py-1.5 rounded-full border border-ink/10 bg-white/50 text-xs font-medium tracking-[0.2em] text-ink/60 uppercase backdrop-blur-md">
+              <div className="px-4 py-1.5 rounded-full border border-ink/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-xs font-medium tracking-[0.2em] text-ink/60 dark:text-white/60 uppercase backdrop-blur-md">
                 Yeni Nesil Çalışma Alanı
               </div>
 
