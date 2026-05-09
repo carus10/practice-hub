@@ -9,7 +9,7 @@ interface PracticeModeProps {
     onExit: () => void;
 }
 
-type PracticeType = 'WORD_TO_MEANING' | 'MEANING_TO_WORD' | 'FILL_BLANK' | null;
+type PracticeType = 'WORD_TO_MEANING' | 'MEANING_TO_WORD' | 'FILL_BLANK' | 'PRONUNCIATION_CHALLENGE' | null;
 
 export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem, onExit }) => {
     const [mode, setMode] = useState<PracticeType>(null);
@@ -22,6 +22,11 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
     // UI state
     const [feedback, setFeedback] = useState<'IDLE' | 'CORRECT' | 'WRONG'>('IDLE');
     const [showAnswer, setShowAnswer] = useState(false);
+
+    // Pronunciation Challenge specific state
+    const [revealedIndices, setRevealedIndices] = useState<number[]>([]);
+    const [hintCount, setHintCount] = useState(0);
+    const [listenCount, setListenCount] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Initial word selection algorithm
@@ -67,6 +72,9 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         setBackspaceCount(0);
         setFeedback('IDLE');
         setShowAnswer(false);
+        setRevealedIndices([]);
+        setHintCount(0);
+        setListenCount(0);
         setTimeout(() => inputRef.current?.focus(), 50);
     };
 
@@ -130,6 +138,8 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
             if (replacedWord && replacedWord.toLowerCase() !== word.toLowerCase()) {
                 extraInfo = 'conjugation';
             }
+        } else if (mode === 'PRONUNCIATION_CHALLENGE') {
+            expected = currentItem.word;
         }
         
         return { prompt, expected, extraInfo, replacedWord };
@@ -209,15 +219,23 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         
         if (isCorrect) {
             setFeedback('CORRECT');
-            if (backspaceCount > 1) {
-                newScore = Math.min(10, newScore + 2); // Struggled
+            if (mode === 'PRONUNCIATION_CHALLENGE') {
+                // listenCount: 1 = perfect(-1), 2 = neutral(0), 3+ = +1
+                const listenPenalty = listenCount <= 1 ? -1 : listenCount <= 2 ? 0 : 1;
+                // hintCount: 0=0, 1=+1, 2=+2, 3+=+3
+                const hintPenalty = Math.min(hintCount, 3);
+                newScore = Math.max(0, Math.min(10, newScore + listenPenalty + hintPenalty));
             } else {
-                newScore = Math.max(0, newScore - 1); // Perfect
+                if (backspaceCount > 1) {
+                    newScore = Math.min(10, newScore + 2);
+                } else {
+                    newScore = Math.max(0, newScore - 1);
+                }
             }
         } else {
             setFeedback('WRONG');
             setShowAnswer(true);
-            newScore = Math.min(10, newScore + 4); // Failed
+            newScore = Math.min(10, newScore + 4);
         }
 
         onUpdateItem({
@@ -234,6 +252,28 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         } else {
             setMode(null); // Session end
         }
+    };
+
+    // ─── Pronunciation helpers ───
+    const speakWord = () => {
+        if (!currentItem) return;
+        const utt = new SpeechSynthesisUtterance(currentItem.word);
+        utt.lang = 'en-US';
+        utt.rate = 0.85;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utt);
+        setListenCount(prev => prev + 1);
+    };
+
+    const revealHint = () => {
+        if (!currentItem) return;
+        const word = currentItem.word;
+        const letterIndices = word.split('').map((ch, i) => i).filter(i => /[a-zA-Z]/.test(word[i]));
+        const unrevealed = letterIndices.filter(i => !revealedIndices.includes(i));
+        if (unrevealed.length === 0) return;
+        const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+        setRevealedIndices(prev => [...prev, pick]);
+        setHintCount(prev => prev + 1);
     };
 
     if (!mode) {
@@ -254,7 +294,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                     <p className="text-stone-500 text-lg max-w-md mx-auto leading-relaxed">Öğrenmek ve test etmek istediğiniz yeteneği seçerek antrenmana başlayın.</p>
                 </header>
 
-                <div className="grid md:grid-cols-3 gap-8 flex-1 items-stretch relative z-10">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 items-stretch relative z-10">
                     {/* Card 1 */}
                     <button 
                         onClick={() => startPractice('WORD_TO_MEANING')}
@@ -287,7 +327,172 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                         <h3 className="font-serif text-2xl text-ink font-medium mb-3">Boşluk Doldurma</h3>
                         <p className="text-sm text-stone-500 leading-relaxed font-medium">Örnek cümleyi okuyun ve eksik olan bağlamdaki kelimeyi bulun.</p>
                     </button>
+
+                    {/* Card 4 — Pronunciation Challenge */}
+                    <button 
+                        onClick={() => startPractice('PRONUNCIATION_CHALLENGE')}
+                        className="group flex flex-col p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white hover:border-violet-200/50 hover:bg-white/90 transition-all duration-500 text-left shadow-[0_8px_30px_rgb(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgb(139,92,246,0.1)] hover:-translate-y-2 relative overflow-hidden delay-200"
+                    >
+                        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-violet-100/50 to-transparent rounded-bl-full opacity-0 transition-opacity duration-500 group-hover:opacity-100 -z-10"></div>
+                        <div className="w-16 h-16 bg-gradient-to-br from-violet-400 to-violet-600 text-white rounded-[1.2rem] flex items-center justify-center mb-8 text-2xl shadow-lg shadow-violet-500/30 group-hover:scale-110 transition-transform duration-500 rotate-2 group-hover:rotate-0">🎧</div>
+                        <h3 className="font-serif text-2xl text-ink font-medium mb-3">Ses → Kelime</h3>
+                        <p className="text-sm text-stone-500 leading-relaxed font-medium">Kelimenin sesini dinle ve harfleri tahmin ederek kelimeyi bul.</p>
+                    </button>
                 </div>
+            </div>
+        );
+    }
+
+    // ─── PRONUNCIATION CHALLENGE GAME SCREEN ───
+    if (mode === 'PRONUNCIATION_CHALLENGE' && currentItem) {
+        const word = currentItem.word;
+        const letterIndices = word.split('').map((_, i) => i).filter(i => /[a-zA-Z]/.test(word[i]));
+        const allRevealed = letterIndices.every(i => revealedIndices.includes(i));
+        const isDone = feedback !== 'IDLE';
+
+        return (
+            <div className="max-w-2xl mx-auto p-6 min-h-[80vh] flex flex-col">
+                <header className="flex justify-between items-center mb-10 mt-4">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setMode(null)} className="flex items-center gap-2 text-stone-500 hover:text-ink transition-colors font-medium">
+                            <IconArrowLeft /> Geri Dön
+                        </button>
+                        {/* Hint button — top left */}
+                        {!isDone && (
+                            <button
+                                onClick={revealHint}
+                                disabled={allRevealed}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium transition-all ${
+                                    allRevealed
+                                        ? 'bg-stone-100 text-stone-300 border-stone-200 cursor-not-allowed'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                }`}
+                                title="Rastgele bir harf aç"
+                            >
+                                💡 İpucu {hintCount > 0 && <span className="bg-amber-200 text-amber-800 text-xs px-1.5 py-0.5 rounded-full">{hintCount}</span>}
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex gap-1">
+                        {queue.map((_, i) => (
+                            <div key={i} className={`w-2 h-2 rounded-full ${
+                                i === currentIndex ? 'bg-violet-500' : i < currentIndex ? 'bg-stone-300' : 'bg-stone-200'
+                            }`} />
+                        ))}
+                    </div>
+                </header>
+
+                <div className="flex-1 flex flex-col items-center justify-center gap-8">
+                    <div className="text-center">
+                        <span className="text-xs uppercase tracking-widest font-bold text-violet-400 mb-1 block">Sesi Dinle, Kelimeyi Bul</span>
+                        <p className="text-stone-400 text-sm">{word.length} harfli bir kelime</p>
+                    </div>
+
+                    {/* Letter Tiles */}
+                    <div className="flex flex-wrap justify-center gap-2">
+                        {word.split('').map((ch, i) => {
+                            const isLetter = /[a-zA-Z]/.test(ch);
+                            if (!isLetter) {
+                                return <div key={i} className="flex items-end pb-2 w-3"><span className="text-xl text-stone-400">{ch}</span></div>;
+                            }
+                            const revealed = revealedIndices.includes(i) || isDone;
+                            const isHinted = revealedIndices.includes(i) && !isDone;
+                            return (
+                                <div key={i} className={`w-10 h-12 flex flex-col items-center justify-end border-b-2 transition-all duration-300 ${
+                                    isDone
+                                        ? feedback === 'CORRECT' ? 'border-emerald-400' : 'border-red-400'
+                                        : isHinted ? 'border-amber-400' : 'border-stone-300'
+                                }`}>
+                                    <span className={`text-2xl font-serif font-bold transition-all duration-300 ${
+                                        isDone
+                                            ? feedback === 'CORRECT' ? 'text-emerald-600' : 'text-red-500'
+                                            : isHinted ? 'text-amber-600' : 'text-ink'
+                                    }`}>
+                                        {revealed ? ch : ''}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Sound Button */}
+                    <button
+                        onClick={speakWord}
+                        disabled={isDone}
+                        className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-medium transition-all shadow-md ${
+                            isDone
+                                ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-violet-500 to-violet-600 text-white hover:from-violet-600 hover:to-violet-700 hover:shadow-lg hover:scale-105 active:scale-95'
+                        }`}
+                    >
+                        <span className="text-xl">🔊</span>
+                        Sesi Dinle
+                        {listenCount > 0 && !isDone && (
+                            <span className="bg-violet-400/40 text-white text-xs px-2 py-0.5 rounded-full">{listenCount}x</span>
+                        )}
+                    </button>
+
+                    {/* Input */}
+                    <div className={`w-full max-w-sm transition-all duration-300 ${feedback === 'WRONG' ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            className={`w-full text-center text-2xl p-4 rounded-2xl border-2 focus:outline-none transition-colors shadow-sm bg-white font-serif ${
+                                feedback === 'IDLE' ? 'border-stone-300 focus:border-violet-400 text-ink'
+                                : feedback === 'CORRECT' ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
+                                : 'border-red-400 bg-red-50 text-red-800'
+                            }`}
+                            placeholder="Kelimeyi yazın..."
+                            value={inputValue}
+                            onChange={e => setInputValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            readOnly={isDone}
+                            spellCheck={false}
+                            autoComplete="off"
+                        />
+                    </div>
+
+                    {/* Check button */}
+                    {feedback === 'IDLE' && (
+                        <button
+                            onClick={checkAnswer}
+                            disabled={!inputValue.trim()}
+                            className="px-8 py-3 bg-violet-600 text-white rounded-2xl font-medium hover:bg-violet-700 disabled:opacity-40 transition-all shadow-md hover:shadow-lg"
+                        >
+                            Kontrol Et
+                        </button>
+                    )}
+
+                    {/* Feedback */}
+                    {feedback === 'CORRECT' && (
+                        <div className="flex flex-col items-center gap-2 animate-in zoom-in duration-300">
+                            <div className="w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <span className="text-emerald-600 font-medium text-lg">Harika!</span>
+                            {hintCount > 0 && <span className="text-xs text-amber-600 bg-amber-50 px-3 py-1 rounded-full">{hintCount} ipucu kullandın</span>}
+                            {listenCount > 0 && <span className="text-xs text-violet-600 bg-violet-50 px-3 py-1 rounded-full">{listenCount} kez dinledin</span>}
+                            <span className="text-sm text-stone-400 bg-stone-100 px-3 py-1 rounded-full mt-1">Devam için Enter'a basın</span>
+                        </div>
+                    )}
+                    {feedback === 'WRONG' && (
+                        <div className="flex flex-col items-center gap-2 animate-in zoom-in duration-300 w-full max-w-sm">
+                            <div className="text-red-500 font-medium">Doğru kelime:</div>
+                            <div className="bg-white border-2 border-red-100 p-4 rounded-xl w-full text-center shadow-sm">
+                                <span className="font-serif text-2xl text-ink font-medium">{word}</span>
+                            </div>
+                            <span className="text-sm text-stone-400 bg-stone-100 px-3 py-1 rounded-full mt-1">Devam için Enter'a basın</span>
+                        </div>
+                    )}
+                </div>
+
+                <style>{`
+                    @keyframes shake {
+                        0%, 100% { transform: translateX(0); }
+                        20%, 60% { transform: translateX(-10px); }
+                        40%, 80% { transform: translateX(10px); }
+                    }
+                `}</style>
             </div>
         );
     }
