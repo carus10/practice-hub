@@ -69,7 +69,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
-  }, []);
+  }, [isDark]);
 
   const toggleTheme = () => {
     const next = !isDark;
@@ -95,25 +95,18 @@ const App: React.FC = () => {
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>(() => loadFromStorage<StudyGroup[]>(STORAGE_KEY_STUDY, []));
   const [activeBook, setActiveBook] = useState<Book | null>(null);
 
-  // ─── MOUNT GUARD ──
-  const isInitialized = useRef(false);
-  useEffect(() => {
-    isInitialized.current = true;
-  }, []);
-
   // ─── SAFE SAVE EFFECTS ──
+  // Lazy initialization already loads from localStorage, so save effects
+  // can safely persist current state on every change without a mount guard.
   useEffect(() => {
-    if (!isInitialized.current) return;
     saveToStorage(STORAGE_KEY_BOOKS, books);
   }, [books]);
 
   useEffect(() => {
-    if (!isInitialized.current) return;
     saveToStorage(STORAGE_KEY_DICT, dictionary);
   }, [dictionary]);
 
   useEffect(() => {
-    if (!isInitialized.current) return;
     saveToStorage(STORAGE_KEY_STUDY, studyGroups);
   }, [studyGroups]);
 

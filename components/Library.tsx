@@ -431,12 +431,12 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                     <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
                       <div 
                         className="bg-stone-600 h-full rounded-full transition-all duration-500" 
-                        style={{ width: `${Math.min(100, (book.progressIndex / book.content.length) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (book.progressIndex / Math.max(1, book.content.length)) * 100)}%` }}
                       ></div>
                     </div>
                     <div className="flex justify-between mt-1.5 text-[10px] text-stone-400 font-medium">
                       <span>İlerleme</span>
-                      <span>%{(Math.min(100, (book.progressIndex / book.content.length) * 100)).toFixed(0)}</span>
+                      <span>%{(Math.min(100, (book.progressIndex / Math.max(1, book.content.length)) * 100)).toFixed(0)}</span>
                     </div>
                   </div>
                </div>

@@ -160,16 +160,20 @@ export const StudyNotes: React.FC<StudyNotesProps> = ({
     setPracticePageStart(0);
   };
 
+  // Stable ref for onUpdateGroup to avoid infinite effect loop
+  const onUpdateGroupRef = useRef(onUpdateGroup);
+  useEffect(() => { onUpdateGroupRef.current = onUpdateGroup; }, [onUpdateGroup]);
+
   // Auto-save progress
   useEffect(() => {
     if (practiceGroup && practiceIndex !== practiceGroup.progressIndex) {
       const timeout = setTimeout(() => {
-        onUpdateGroup({ ...practiceGroup, progressIndex: practiceIndex });
+        onUpdateGroupRef.current({ ...practiceGroup, progressIndex: practiceIndex });
         setPracticeGroup(prev => prev ? { ...prev, progressIndex: practiceIndex } : null);
       }, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [practiceIndex, practiceGroup, onUpdateGroup]);
+  }, [practiceIndex, practiceGroup]);
 
   // Practice page sync
   useEffect(() => {

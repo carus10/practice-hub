@@ -27,6 +27,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
     const [revealedIndices, setRevealedIndices] = useState<number[]>([]);
     const [hintCount, setHintCount] = useState(0);
     const [listenCount, setListenCount] = useState(0);
+    const [fillBlankSentenceIndex, setFillBlankSentenceIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // ─── Kategorik Kelime Seçim Algoritması ───
@@ -47,7 +48,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         const priorityScore = (item: typeof practiceItems[0]) => {
             const daysSince = item.lastPracticedAt
                 ? Math.min((Date.now() - item.lastPracticedAt) / 86400000, 7)
-                : 0;
+                : 7; // New words get max daysSince for high priority
             return daysSince * 1.5 + Math.random() * 2;
         };
 
@@ -116,6 +117,8 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         setRevealedIndices([]);
         setHintCount(0);
         setListenCount(0);
+        // Pick a random sentence index for FILL_BLANK mode
+        setFillBlankSentenceIndex(Math.floor(Math.random() * 100));
         setTimeout(() => inputRef.current?.focus(), 50);
     };
 
@@ -140,7 +143,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
             expected = currentItem.word;
         } else if (mode === 'FILL_BLANK') {
             const ex = (currentItem.exampleSentences && currentItem.exampleSentences.length > 0) 
-                ? currentItem.exampleSentences[Math.floor(Math.random() * currentItem.exampleSentences.length)] 
+                ? currentItem.exampleSentences[fillBlankSentenceIndex % currentItem.exampleSentences.length] 
                 : currentItem.exampleSentence || '';
             
             let word = currentItem.word;
@@ -160,9 +163,14 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
                 let bestMatch = '';
                 
                 for (const w of wordsInSentence) {
-                    if (stemmer(w.toLowerCase()) === targetStem) {
+                    const wStem = stemmer(w.toLowerCase());
+                    if (wStem === targetStem) {
                         bestMatch = w;
                         break;
+                    }
+                    // Fallback for non-English words: check if one contains the other
+                    if (!bestMatch && (w.toLowerCase().includes(word.toLowerCase()) || word.toLowerCase().includes(w.toLowerCase())) && w.length >= 3) {
+                        bestMatch = w;
                     }
                 }
                 
@@ -184,7 +192,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         }
         
         return { prompt, expected, extraInfo, replacedWord };
-    }, [currentItem, mode]);
+    }, [currentItem, mode, fillBlankSentenceIndex]);
 
     useEffect(() => {
         setConjugatedMeaning('');
@@ -228,7 +236,7 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         }
     };
 
-    const normalize = (str: string) => str.toLowerCase().replace(/[^a-zöçşığü]/gi, '').trim();
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-zöçşığü\s]/gi, '').replace(/\s+/g, ' ').trim();
 
     const checkAnswer = () => {
         if (!inputValue.trim()) return;
@@ -300,7 +308,12 @@ export const PracticeMode: React.FC<PracticeModeProps> = ({ items, onUpdateItem,
         if (!currentItem) return;
         const newScore = Math.min(10, (currentItem.difficultyScore || 0) + 3);
         onUpdateItem({ ...currentItem, difficultyScore: newScore, lastPracticedAt: Date.now() });
-        nextWord();
+        // Show correct answer briefly before moving on
+        setFeedback('WRONG');
+        setShowAnswer(true);
+        setTimeout(() => {
+            nextWord();
+        }, 1200);
     };
 
     // ─── Pronunciation helpers ───
