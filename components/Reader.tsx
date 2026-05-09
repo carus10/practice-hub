@@ -662,6 +662,29 @@ export const Reader: React.FC<ReaderProps> = ({
                                       <p className="text-stone-600 italic text-sm">"{wordInfo.example}"</p>
                                   </div>
                               )}
+                              {/* ─── Pronunciation Row ─── */}
+                              <div className="flex items-center gap-3 pt-1">
+                                  <span className="text-xs text-stone-400 uppercase font-bold tracking-wider">Telaffuz</span>
+                                  <button
+                                      onClick={() => {
+                                          const utt = new SpeechSynthesisUtterance(wordInfo.word);
+                                          utt.lang = 'en-US';
+                                          window.speechSynthesis.cancel();
+                                          window.speechSynthesis.speak(utt);
+                                      }}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 text-xs font-medium transition-colors"
+                                      title="Web tarayıcısı ile seslet"
+                                  >
+                                      🔊 Seslet
+                                  </button>
+                                  <button
+                                      onClick={() => window.open(`https://youglish.com/pronounce/${encodeURIComponent(wordInfo.word)}/english`, '_blank')}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 text-xs font-medium transition-colors"
+                                      title="YouGlish'te gerçek kullanım videolarını gör"
+                                  >
+                                      🎬 YouGlish'te Gör
+                                  </button>
+                              </div>
                           </div>
                       ) : null}
                   </div>
@@ -671,7 +694,12 @@ export const Reader: React.FC<ReaderProps> = ({
                           <button onClick={closeWordInfoModal} className="px-4 py-2 text-stone-500 hover:bg-stone-200 rounded-lg font-medium transition-colors text-sm">
                               Kapat
                           </button>
-                          {!wordInfo.isLocal && (
+                          {wordInfo.isLocal ? (
+                              <button disabled className="px-5 py-2 bg-stone-100 text-stone-400 rounded-lg font-medium text-sm flex items-center gap-2 cursor-default border border-stone-200">
+                                  <IconDictionary />
+                                  Sözlükte Mevcut ✓
+                              </button>
+                          ) : (
                               <button onClick={saveWordInfoToDictionary} className="px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-sm font-medium transition-colors text-sm flex items-center gap-2">
                                   <IconDictionary />
                                   Sözlüğe Kaydet

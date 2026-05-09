@@ -393,6 +393,34 @@ export const Dictionary: React.FC<DictionaryProps> = ({
                                                                     {item.definition || 'Henüz anlam eklenmedi'}
                                                                 </p>
                                                             </div>
+
+                                                            {/* ─── Pronunciation Row ─── */}
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs text-stone-400 uppercase font-bold tracking-wider">Telaffuz</span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const utt = new SpeechSynthesisUtterance(item.word);
+                                                                        utt.lang = 'en-US';
+                                                                        window.speechSynthesis.cancel();
+                                                                        window.speechSynthesis.speak(utt);
+                                                                    }}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 text-xs font-medium transition-colors"
+                                                                    title="Web tarayıcısı ile seslet"
+                                                                >
+                                                                    🔊 Seslet
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        window.open(`https://youglish.com/pronounce/${encodeURIComponent(item.word)}/english`, '_blank');
+                                                                    }}
+                                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 text-xs font-medium transition-colors"
+                                                                    title="YouGlish'te gerçek kullanım videolarını gör"
+                                                                >
+                                                                    🎬 YouGlish'te Gör
+                                                                </button>
+                                                            </div>
                                                             
                                                             {/* Örnek Cümleler */}
                                                             <div>
