@@ -52,7 +52,18 @@ function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
 }
 
 const App: React.FC = () => {
-  const [view, setView] = useState<AppView>(AppView.WELCOME);
+  // Show WELCOME only on first visit per session (tab close resets it, refresh keeps it)
+  const [view, setView] = useState<AppView>(() => {
+    if (sessionStorage.getItem('pratik_hub_session') === 'active') {
+      return AppView.LIBRARY;
+    }
+    return AppView.WELCOME;
+  });
+
+  // Mark session as active as soon as app mounts (survives refresh, clears on tab close)
+  useEffect(() => {
+    sessionStorage.setItem('pratik_hub_session', 'active');
+  }, []);
 
   // ─── LAZY INITIALIZATION with migration ──
   const [books, setBooks] = useState<Book[]>(() => migrateBooks(loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, [])));
