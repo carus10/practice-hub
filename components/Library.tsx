@@ -11,9 +11,11 @@ interface LibraryProps {
   onUpdateBook: (book: Book) => void;
   onOpenDictionary: () => void;
   onOpenStudyNotes: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
 }
 
-export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onUpdateBook, onOpenDictionary, onOpenStudyNotes }) => {
+export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook, onDeleteBook, onUpdateBook, onOpenDictionary, onOpenStudyNotes, isDark, onToggleTheme }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'paste' | 'pdf'>('paste');
   const [newBookTitle, setNewBookTitle] = useState('');
@@ -250,7 +252,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
   return (
     <div className="flex h-screen bg-[#faf9f6] overflow-hidden font-sans selection:bg-accent/30 relative">
       {/* Background Subtle Dot Pattern */}
-      <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(#d6d3d1 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: `radial-gradient(var(--dot-color) 1px, transparent 1px)`, backgroundSize: '20px 20px' }}></div>
       
       {/* LEFT SIDEBAR */}
       <aside className="relative z-10 w-64 bg-white/80 backdrop-blur-xl border-r border-stone-200/70 flex flex-col justify-between py-8 px-6 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -279,9 +281,25 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
           </nav>
         </div>
 
-        <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center gap-2 bg-ink text-paper px-4 py-3.5 rounded-xl hover:bg-stone-800 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] font-medium text-sm group active:scale-95">
-          <IconPlus /> <span>Yeni İçerik Ekle</span>
-        </button>
+        <div className="space-y-3">
+          {/* Theme Toggle */}
+          <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors duration-300 ${isDark ? 'bg-stone-800/50' : 'bg-stone-100'}`}>
+            <span className="text-sm">☀️</span>
+            <button
+              onClick={onToggleTheme}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-500 ${isDark ? 'bg-indigo-600' : 'bg-stone-300'}`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-500 ${isDark ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
+                style={{ transitionTimingFunction: 'cubic-bezier(0.68,-0.55,0.265,1.55)' }}
+              />
+            </button>
+            <span className="text-sm">🌙</span>
+          </div>
+
+          <button onClick={() => setIsModalOpen(true)} className="w-full flex items-center justify-center gap-2 bg-ink text-paper px-4 py-3.5 rounded-xl hover:bg-stone-800 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.15)] font-medium text-sm group active:scale-95">
+            <IconPlus /> <span>Yeni İçerik Ekle</span>
+          </button>
+        </div>
       </aside>
 
       {/* MAIN CONTENT AREA */}

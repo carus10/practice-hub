@@ -52,7 +52,7 @@ function migrateDictionary(items: DictionaryItem[]): DictionaryItem[] {
 }
 
 const App: React.FC = () => {
-  // Show WELCOME only on first visit per session (tab close resets it, refresh keeps it)
+  // Show WELCOME only on first visit per session
   const [view, setView] = useState<AppView>(() => {
     if (sessionStorage.getItem('pratik_hub_session') === 'active') {
       return AppView.LIBRARY;
@@ -60,10 +60,30 @@ const App: React.FC = () => {
     return AppView.WELCOME;
   });
 
-  // Mark session as active as soon as app mounts (survives refresh, clears on tab close)
   useEffect(() => {
     sessionStorage.setItem('pratik_hub_session', 'active');
   }, []);
+
+  // ─── DARK MODE ───
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('pratik_hub_theme') === 'dark');
+  const [curtainVisible, setCurtainVisible] = useState(false);
+  const [curtainColor, setCurtainColor] = useState('');
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setCurtainColor(next ? '#111111' : '#f7f5f0');
+    setCurtainVisible(true);
+    setTimeout(() => {
+      setIsDark(next);
+      localStorage.setItem('pratik_hub_theme', next ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', next);
+    }, 350);
+    setTimeout(() => setCurtainVisible(false), 800);
+  };
 
   // ─── LAZY INITIALIZATION with migration ──
   const [books, setBooks] = useState<Book[]>(() => migrateBooks(loadFromStorage<Book[]>(STORAGE_KEY_BOOKS, [])));
@@ -252,6 +272,13 @@ const App: React.FC = () => {
 
   return (
     <div className="font-sans text-ink antialiased bg-paper min-h-screen selection:bg-stone-200 selection:text-ink">
+      {/* Theme Curtain */}
+      {curtainVisible && (
+        <div
+          className="fixed inset-0 z-[9999] pointer-events-none"
+          style={{ backgroundColor: curtainColor, animation: 'themeCurtain 0.8s ease-in-out forwards' }}
+        />
+      )}
       {view === AppView.WELCOME ? (
         <WelcomeScreen onEnter={() => setView(AppView.LIBRARY)} />
       ) : (
@@ -265,6 +292,8 @@ const App: React.FC = () => {
               onUpdateBook={handleUpdateBook}
               onOpenDictionary={() => setView(AppView.DICTIONARY)}
               onOpenStudyNotes={() => setView(AppView.STUDY_NOTES)}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
             />
           ) : view === AppView.DICTIONARY ? (
             <Dictionary 
