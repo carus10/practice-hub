@@ -410,7 +410,7 @@ export const Library: React.FC<LibraryProps> = ({ books, onSelectBook, onAddBook
                  )}
                  
                  {/* Mode Badge Overlay */}
-                 <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-white/95 backdrop-blur-sm shadow-sm border border-black/5">
+                 <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-white/90 backdrop-blur-sm shadow-sm border border-black/5">
                     <span className={`scale-75 origin-center ${getModeColor(book.mode || 'normal')}`}>{getModeIcon(book.mode || 'normal')}</span>
                     <span className="text-[9px] font-bold text-stone-700 tracking-wider uppercase">{getModeLabel(book.mode || 'normal')}</span>
                  </div>
